@@ -32,6 +32,6 @@
 - Request reviewers for each affected area (`CLI`, `ingest`, `docker`) and wait for automated checks before merging.
 
 ## Security & Configuration Tips
-- Copy `.env.example` to `.env` and set `CODEX_VECTOR_COLLECTION`, embedding variables, Meilisearch keys, and secrets locally only.
+- Copy `.env.example` to `.env` and set `CODEX_VECTOR_COLLECTION`, embedding variables, Meilisearch keys, and secrets locally only (Bitwarden export script reads `CODEX_MEILI_MASTER_KEY`).
 - Prefer shell exports or local keychains for API tokens; avoid persisting credentials in scripts or compose files.
 - Keep Docker volumes named as in `docker/` configs to preserve collection data across upgrades.
