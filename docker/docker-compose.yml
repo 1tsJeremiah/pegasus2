@@ -39,9 +39,29 @@ services:
     networks:
       - vector-network
 
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meili-search
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${CODEX_MEILI_API_KEY:-prod-master-key}
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - vector-network
+
 volumes:
   chroma_data:
   qdrant_data:
+  meili_data:
 
 networks:
   vector-network:

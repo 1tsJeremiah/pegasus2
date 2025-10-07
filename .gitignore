@@ -7,3 +7,4 @@ data/
 logs/
 docker/chroma_data/
 docker/qdrant_data/
+docker/meili_data/

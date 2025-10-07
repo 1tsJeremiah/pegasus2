@@ -118,6 +118,25 @@ Provides document totals and most frequent metadata values; combine with `--json
 
 For convenience run: `scripts/codex/report_stats.sh`.
 
+### Keyword search companion
+
+```bash
+# Ensure Meilisearch is running (compose brings it up alongside Chroma)
+docker compose -f docker/docker-compose.dev.yml up -d meilisearch
+
+# Create the index and ingest local/system files
+python src/codex_keyword/meili_cli.py create --index codex_os_search
+python src/codex_keyword/meili_cli.py index-path \
+  --index codex_os_search \
+  --include .md --include .conf --include .py --include .service \
+  . /etc
+
+# Run a keyword lookup
+python src/codex_keyword/meili_cli.py search "restart networking" --limit 5
+```
+
+Add `config/codex/meili-cli.json` to Codex when you want agents to query the keyword index directly.
+
 ## 4. Hook Into Codex
 
 1. Ensure the vector CLI can reach the Chroma instance (use the `status` command).

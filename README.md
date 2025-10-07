@@ -14,7 +14,7 @@ A comprehensive Docker-based solution for integrating vector databases with Lang
 # 1. Clone and navigate to the project
 cd vector-db-langchain
 
-# 2. Start the vector database
+# 2. Start the vector database and keyword index
 docker-compose -f docker/docker-compose.dev.yml up -d
 
 # 3. Create a virtual environment (recommended)
@@ -49,6 +49,7 @@ This project provides a seamless integration between:
 - **🎨 Rich Terminal UI**: Beautiful command-line interface with Rich library
 - **📊 Collection Analytics**: Built-in stats command and nightly reports surface top sources and document trends
 - **🎯 Embedding Flexibility**: Prefers `sentence-transformers` models when available and falls back to Blake2b-derived vectors for fully offline use
+- **⚡ Keyword Search Companion**: Optional Meilisearch index delivers lightning-fast filename and content matches across the OS
 
 ### Preloaded Collections
 - `codex_agent`: OpenAI Codex cookbook excerpts
@@ -310,6 +311,22 @@ for match in client.query_results("codex_agent", "version control", limit=3):
     print(match["document"], match["metadata"])
 ```
 
+### Keyword Search CLI
+
+```bash
+# Create the Meilisearch index (idempotent)
+python src/codex_keyword/meili_cli.py create --index codex_os_search
+
+# Index local repository files and selected system paths
+python src/codex_keyword/meili_cli.py index-path \
+  --index codex_os_search \
+  --include .md --include .conf --include .py --include .service \
+  . /etc
+
+# Execute a keyword search across the indexed corpus
+python src/codex_keyword/meili_cli.py search "restart networking" --limit 5
+```
+
 ### Codex Agent Integration
 
 ```yaml
@@ -348,6 +365,10 @@ vector-db-langchain/
 │   ├── codex_integration/         # LangChain-based CLI
 │   │   ├── __init__.py
 │   │   └── vector_cli.py
+│   ├── codex_keyword/             # Meilisearch keyword CLI and helpers
+│   │   ├── __init__.py
+│   │   ├── client.py
+│   │   └── meili_cli.py
 ├── ⚙️ scripts/                    # Automation scripts
 │   └── codex/
 │       ├── launch_mcp_stack.sh    # Orchestrate vector sync and MCP servers
@@ -355,9 +376,14 @@ vector-db-langchain/
 │       ├── report_stats.sh        # On-demand collection statistics
 │       ├── run_docker_mcp.sh      # Launch Docker MCP server
 │       ├── run_github_mcp.sh      # Launch GitHub MCP server
-│       └── sync_documents.sh      # Nightly doc sync + health report
+│       ├── sync_documents.sh      # Nightly doc sync + health report
+│       └── index_keyword.sh       # Populate Meilisearch with repo + OS files
 ├── 🗂 config/
-│   └── codex/vector-cli.json      # Manifest for registering the CLI tool
+│   ├── codex/vector-cli.json      # Manifest for registering the CLI tool
+│   ├── codex/all-tools.json       # Aggregated tool manifest for agents
+│   ├── codex/docker-mcp.json      # Docker MCP manifest
+│   ├── codex/github-mcp.json      # GitHub MCP manifest
+│   └── codex/meili-cli.json       # Keyword search manifest
 ├── 📋 requirements.txt            # Runtime dependencies
 ├── 📄 requirements-dev.txt        # Development and linting dependencies
 ├── 🔒 .env.example                # Environment variables template
@@ -422,6 +448,9 @@ CHROMA_PORT=8000                          # Chroma server port
 QDRANT_HOST=localhost                      # Qdrant server host  
 QDRANT_PORT=6333                          # Qdrant server port
 CODEX_VECTOR_COLLECTION=codex_agent     # Collection name
+CODEX_MEILI_URL=http://127.0.0.1:7700    # Meilisearch base URL
+CODEX_MEILI_API_KEY=dev-master-key       # Meilisearch API key (optional for dev)
+CODEX_MEILI_INDEX=codex_os_search        # Keyword index name
 ```
 
 ### Docker Customization

@@ -1,0 +1,16 @@
+{
+  "tools": {
+    "meili-cli": {
+      "command": "python3",
+      "args": [
+        "src/codex_keyword/meili_cli.py"
+      ],
+      "env": {
+        "PYTHONPATH": "src",
+        "CODEX_MEILI_URL": "http://127.0.0.1:7700",
+        "CODEX_MEILI_INDEX": "codex_os_search"
+      },
+      "description": "Keyword search CLI backed by Meilisearch"
+    }
+  }
+}
