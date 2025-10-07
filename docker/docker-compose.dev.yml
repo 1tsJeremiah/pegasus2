@@ -21,7 +21,7 @@ services:
       - "7700:7700"
     environment:
       MEILI_ENV: development
-      MEILI_MASTER_KEY: ${CODEX_MEILI_API_KEY:-dev-master-key}
+      MEILI_MASTER_KEY: ${CODEX_MEILI_API_KEY:-dev-master-key-123456}
     volumes:
       - meili_data:/meili_data
     restart: unless-stopped

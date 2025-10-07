@@ -449,7 +449,7 @@ QDRANT_HOST=localhost                      # Qdrant server host
 QDRANT_PORT=6333                          # Qdrant server port
 CODEX_VECTOR_COLLECTION=codex_agent     # Collection name
 CODEX_MEILI_URL=http://127.0.0.1:7700    # Meilisearch base URL
-CODEX_MEILI_API_KEY=dev-master-key       # Meilisearch API key (optional for dev)
+CODEX_MEILI_API_KEY=dev-master-key-123456 # Meilisearch API key (optional for dev)
 CODEX_MEILI_INDEX=codex_os_search        # Keyword index name
 ```
 
@@ -473,7 +473,7 @@ services:
 
 # Test Docker setup
 docker-compose -f docker/docker-compose.dev.yml ps
-curl http://localhost:8000/api/v1/heartbeat
+curl http://localhost:8000/api/v2/heartbeat
 ```
 
 ## 🚀 Advanced Usage
