@@ -1,6 +1,6 @@
-# Warp Terminal Vector Database LangChain Integration
+# Codex Agent Vector Database LangChain Integration
 
-A comprehensive Docker-based solution for integrating vector databases with LangChain to enhance Warp Terminal with AI-powered semantic search, intelligent command assistance, and context-aware development workflows.
+A comprehensive Docker-based solution for integrating vector databases with LangChain to enhance Codex Agent with AI-powered semantic search, intelligent command assistance, and context-aware development workflows.
 
 ![Project Status](https://img.shields.io/badge/status-ready%20for%20testing-green)
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
@@ -8,24 +8,28 @@ A comprehensive Docker-based solution for integrating vector databases with Lang
 
 ## 🚀 Quick Start
 
+> **Note**: Replace `python` with `python3` if your environment does not provide the `python` alias.
+
 ```bash
 # 1. Clone and navigate to the project
-cd warp-vector-db-langchain
+cd vector-db-langchain
 
 # 2. Start the vector database
 docker-compose -f docker/docker-compose.dev.yml up -d
 
-# 3. Install dependencies
+# 3. Create a virtual environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# 4. Set up your OpenAI API key
+# 4. (Optional) Set up your OpenAI API key
 export OPENAI_API_KEY="your-api-key-here"
 
-# 5. Initialize the system
-python src/warp_integration/vector_cli.py setup
+# 5. Initialize the system with the LangChain CLI
+./.venv/bin/python src/codex_integration/vector_cli.py setup
 
 # 6. Test semantic search
-python src/warp_integration/vector_cli.py search "find large files"
+./.venv/bin/python src/codex_integration/vector_cli.py search "find large files"
 ```
 
 ## 🎯 Project Overview
@@ -33,7 +37,7 @@ python src/warp_integration/vector_cli.py search "find large files"
 This project provides a seamless integration between:
 - **🗄️ Vector Databases** (Chroma/Qdrant) containerized with Docker
 - **🔗 LangChain** for vector operations, embeddings, and retrieval
-- **⚡ Warp Terminal** for AI-enhanced terminal experiences
+- **⚡ Codex Agent** for AI-enhanced terminal experiences
 
 ### Key Features
 
@@ -43,12 +47,19 @@ This project provides a seamless integration between:
 - **🐳 Docker-First**: Easy deployment with Docker and docker-compose
 - **🔄 Multiple Vector DB Support**: Choose between Chroma (development) and Qdrant (production)
 - **🎨 Rich Terminal UI**: Beautiful command-line interface with Rich library
+- **📊 Collection Analytics**: Built-in stats command and nightly reports surface top sources and document trends
+- **🎯 Embedding Flexibility**: Prefers `sentence-transformers` models when available and falls back to Blake2b-derived vectors for fully offline use
+
+### Preloaded Collections
+- `codex_agent`: OpenAI Codex cookbook excerpts
+- `ubuntu-docs`: Offline Ubuntu server administration references
+- `infra-docs`: Cloudflare Tunnels, Pi-hole Docker, Traefik (Docker provider + DNS challenge), and Docker Compose official docs
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│           Warp Terminal                 │
+│           Codex Agent                 │
 │  ┌─────────────────────────────────────┤
 │  │ 🔍 Semantic Search                  │
 │  │ 🤖 AI Command Assistant             │
@@ -108,7 +119,7 @@ All major vector stores support:
 
 - Docker and Docker Compose
 - Python 3.8+
-- OpenAI API Key (for embeddings)
+- Optional: install `sentence-transformers` and download a local model (e.g., `pip install sentence-transformers` and `CODEX_EMBED_MODEL=all-MiniLM-L6-v2`) for high-quality embeddings
 
 ### Step-by-Step Installation
 
@@ -117,7 +128,7 @@ All major vector stores support:
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd warp-vector-db-langchain
+cd vector-db-langchain
 
 # Create virtual environment (recommended)
 python -m venv venv
@@ -133,10 +144,12 @@ pip install -r requirements.txt
 # Create .env file
 cp .env.example .env
 
-# Edit .env with your settings
+# Edit .env with your settings (only needed if you plan to use LangChain notebooks or cloud embeddings)
 OPENAI_API_KEY=your-openai-api-key-here
 CHROMA_HOST=localhost
 CHROMA_PORT=8000
+CODEX_EMBED_MODEL=all-MiniLM-L6-v2
+CODEX_VECTOR_DIM=384
 ```
 
 #### 3. Start Vector Database
@@ -154,11 +167,14 @@ docker-compose -f docker/docker-compose.yml up -d
 #### 4. Initialize the System
 
 ```bash
-# Setup initial command database
-python src/warp_integration/vector_cli.py setup
+# Setup initial command database (LangChain-enabled CLI)
+./.venv/bin/python src/codex_integration/vector_cli.py setup
+
+# Optional: re-embed with a local sentence-transformers model
+CODEX_EMBED_MODEL=all-MiniLM-L6-v2 ./.venv/bin/python -m src.codex_vector.ingest.bootstrap
 
 # Verify installation
-python src/warp_integration/vector_cli.py status
+./.venv/bin/python src/codex_integration/vector_cli.py status
 ```
 
 ## 📚 Usage Examples
@@ -167,52 +183,139 @@ python src/warp_integration/vector_cli.py status
 
 ```bash
 # Alias for convenience
-alias vcli="python src/warp_integration/vector_cli.py"
+alias vcli="./.venv/bin/python src/codex_integration/vector_cli.py"
 
-# Semantic search for commands
-vcli search "find large files in directory"
-vcli search "commit changes to git" --scores
+# Seed or refresh the built-in collection
+vcli setup
 
-# Get contextual help
-vcli help "docker container logs"
-vcli help "python virtual environment"
+# Add new command knowledge (auto-creates the collection with --create)
+vcli add codex_agent "kubectl get pods -n namespace" --source k8s-docs
 
-# Add new command knowledge
-vcli add "kubectl get pods -n namespace" --source "k8s-docs" --category "kubernetes"
+# Bulk load snippets from a file (one per line)
+vcli upsert codex_agent --file snippets.txt --tag docs --create
 
-# Add structured command help
-vcli add-help "rsync" "Synchronize files between locations" \
-  -e "rsync -av source/ dest/" \
-  -e "rsync -av --delete source/ dest/"
+# Run a similarity search
+vcli search codex_agent "deploy container"
 
-# Check system status
+# Inspect collections and connection status
 vcli status
 ```
+
+### Embedding options
+
+- Set `CODEX_EMBED_MODEL` to the name or path of a local `sentence-transformers` model to enable high-quality embeddings.
+- Adjust `CODEX_VECTOR_DIM` when you change models or want a different deterministic fallback size (default 384).
+- The shipped manifests set `CODEX_EMBED_PROVIDER=hash`, so the CLI sticks to deterministic Blake2b vectors unless you override the provider (e.g., `huggingface`, `openai`).
+- If no higher fidelity model is configured the CLI uses Blake2b-derived vectors so everything continues to work offline.
+
+### Bulk ingestion
+
+Use the bootstrap helper to ingest key project docs (or provide your own paths):
+
+```bash
+python -m src.codex_vector.ingest.bootstrap \
+  --paths README.md docs/codex_integration_guide.md docs/vector_db_research.md \
+  src/codex_integration/vector_cli.py src/codex_vector/client.py
+```
+
+The script splits content into overlapping chunks, attaches metadata, and stores it in the configured collection.
+
+### Official Codex documentation
+
+Fetch the latest official examples from the OpenAI Cookbook and ingest them automatically:
+
+```bash
+CODEX_EMBED_MODEL=all-MiniLM-L6-v2 python -m src.codex_vector.ingest.official_docs
+```
+
+Fetched source material is saved under `data/codex/official_docs/` for auditing, and each chunk is tagged with its originating URL.
+
+### Codex tool manifest
+
+Copy `config/codex/vector-cli.json` into your Codex configuration (for example `~/.codex/tools/vector-cli.json`) so the agent can invoke the CLI directly. Adjust the `command`, `args`, or environment block if you relocate the repository.
+
+Need the full toolbox? `config/codex/all-tools.json` bundles the LangChain CLI, Docker MCP server, and GitHub MCP server behind one manifest so Codex can orchestrate containers, repositories, and the knowledge base without extra wiring.
+
+### Agent stack helper
+
+Run `scripts/codex/launch_mcp_stack.sh` to refresh the vector collections (via `sync_documents.sh`) and launch the MCP servers. Tweak behaviour with env vars such as `RUN_VECTOR_SYNC=0`, `START_DOCKER_MCP=0`, or `START_GITHUB_MCP=0`. The script:
+
+```bash
+RUN_VECTOR_SYNC=1 scripts/codex/launch_mcp_stack.sh
+```
+
+- Boots the Chroma container if required and runs the ingestion/health pipeline.
+- Starts the Docker MCP server (unless it is already running).
+- Starts the GitHub MCP server when `GITHUB_PAT`/`GITHUB_PERSONAL_ACCESS_TOKEN` is present.
+- Defaults to `CODEX_EMBED_PROVIDER=hash`; override the variable before launching if you prefer HuggingFace or OpenAI embeddings.
+
+Press `Ctrl+C` to shut down the background MCP servers that the helper launches.
+
+### Docker MCP server
+
+Add Docker management capabilities to Codex:
+
+- Manifest: `config/codex/docker-mcp.json` (copy into `~/.codex/tools/` alongside the vector CLI manifest).
+- Runtime: `scripts/codex/run_docker_mcp.sh` (wraps the local `.venv` and launches `mcp-server-docker`).
+
+Start the server in a dedicated terminal when you need Docker access:
+
+```bash
+scripts/codex/run_docker_mcp.sh
+```
+
+### GitHub MCP server
+
+- Manifest: `config/codex/github-mcp.json` (copy into `~/.codex/tools/`).
+- Runtime: `scripts/codex/run_github_mcp.sh` (expects `GITHUB_PAT` or `GITHUB_PERSONAL_ACCESS_TOKEN` in the environment).
+
+Launch when you want Codex to interact with repositories:
+
+```bash
+GITHUB_PAT=ghp_xxx scripts/codex/run_github_mcp.sh
+```
+
+### Automated health checks
+
+Validate the stack at any time (the nightly sync script runs this after fetching docs):
+
+```bash
+CODEX_EMBED_MODEL=all-MiniLM-L6-v2 python -m src.codex_vector.health
+```
+
+JSON output is written to STDOUT (or `logs/codex/health.json` when triggered by the cron job) and verifies query coverage plus the presence of key resources.
+
+### Collection statistics
+
+```bash
+./.venv/bin/python src/codex_integration/vector_cli.py stats codex_agent --top 5
+```
+
+The command reports total documents and the most common sources, doc IDs, and titles. Use `--json <path>` to export machine-readable summaries (the nightly sync job writes `logs/codex/stats.json`).
 
 ### Python API Usage
 
 ```python
-from examples.chroma_basic_example import ChromaVectorStore
+from codex_vector.client import CodexVectorClient
 
-# Initialize vector store
-vector_store = ChromaVectorStore()
+client = CodexVectorClient()
+client.upsert(
+    "codex_agent",
+    ["How to use git rebase", "Docker container management"],
+    metadata_items=[{"source": "docs"}, {"source": "docs"}],
+    create_collection=True,
+)
 
-# Add documents
-documents = ["How to use git rebase", "Docker container management"]
-vector_store.add_documents(documents)
-
-# Semantic search
-results = vector_store.similarity_search("version control", k=3)
-for doc in results:
-    print(doc.page_content)
+for match in client.query_results("codex_agent", "version control", limit=3):
+    print(match["document"], match["metadata"])
 ```
 
-### Warp Terminal Integration
+### Codex Agent Integration
 
 ```yaml
-# ~/.warp/workflows/vector-search.yaml
+# ~/.codex/workflows/vector-search.yaml
 name: "Smart Command Search"
-command: "python /path/to/vector_cli.py search \"{{query}}\""
+command: "python3 /path/to/cli.py search \"{{query}}\""
 description: "Find commands using AI-powered semantic search"
 arguments:
   - name: query
@@ -223,22 +326,42 @@ arguments:
 ## 📁 Project Structure
 
 ```
-warp-vector-db-langchain/
+vector-db-langchain/
 ├── 🐳 docker/                     # Docker configurations
 │   ├── docker-compose.yml         # Production setup (Chroma + Qdrant)
 │   └── docker-compose.dev.yml     # Development setup (Chroma only)
 ├── 📄 docs/                       # Documentation
 │   ├── vector_db_research.md      # Vector DB analysis
-│   └── warp_integration_guide.md  # Warp Terminal integration
-├── 🎯 examples/                   # Usage examples and demos
-│   └── chroma_basic_example.py    # Basic Chroma integration
+│   └── codex_integration_guide.md  # Codex Agent integration
 ├── 🔧 src/                        # Source code
-│   ├── langchain_integration/     # LangChain integration modules
-│   └── warp_integration/          # Warp Terminal integration
-│       └── vector_cli.py          # Main CLI tool
-├── 📋 requirements.txt            # Python dependencies
-├── 🔒 .env.example               # Environment variables template
-└── 📖 README.md                  # This file
+│   ├── codex_vector/              # Codex Agent tooling and ingestion helpers
+│   │   ├── __init__.py
+│   │   ├── client.py
+│   │   ├── constants.py
+│   │   ├── embeddings.py
+│   │   ├── health.py
+│   │   └── ingest/
+│   │       ├── bootstrap.py
+│   │       ├── infra_docs.py
+│   │       ├── official_docs.py
+│   │       └── ubuntu_docs.py
+│   ├── codex_integration/         # LangChain-based CLI
+│   │   ├── __init__.py
+│   │   └── vector_cli.py
+├── ⚙️ scripts/                    # Automation scripts
+│   └── codex/
+│       ├── launch_mcp_stack.sh    # Orchestrate vector sync and MCP servers
+│       ├── publish_session_resume.py # Persist searchable engagement summaries
+│       ├── report_stats.sh        # On-demand collection statistics
+│       ├── run_docker_mcp.sh      # Launch Docker MCP server
+│       ├── run_github_mcp.sh      # Launch GitHub MCP server
+│       └── sync_documents.sh      # Nightly doc sync + health report
+├── 🗂 config/
+│   └── codex/vector-cli.json      # Manifest for registering the CLI tool
+├── 📋 requirements.txt            # Runtime dependencies
+├── 📄 requirements-dev.txt        # Development and linting dependencies
+├── 🔒 .env.example                # Environment variables template
+└── 📖 README.md                # This file
 ```
 
 ## 🎨 Features in Detail
@@ -298,7 +421,7 @@ CHROMA_HOST=localhost                      # Chroma server host
 CHROMA_PORT=8000                          # Chroma server port
 QDRANT_HOST=localhost                      # Qdrant server host  
 QDRANT_PORT=6333                          # Qdrant server port
-VECTOR_COLLECTION=warp_terminal           # Collection name
+CODEX_VECTOR_COLLECTION=codex_agent     # Collection name
 ```
 
 ### Docker Customization
@@ -315,12 +438,9 @@ services:
 ## 🧪 Testing
 
 ```bash
-# Run basic functionality test
-python examples/chroma_basic_example.py
-
-# Test CLI functionality
-python src/warp_integration/vector_cli.py status
-python src/warp_integration/vector_cli.py search "test query"
+# Run CLI smoke checks
+./.venv/bin/python src/codex_integration/vector_cli.py status
+./.venv/bin/python src/codex_integration/vector_cli.py search "test query"
 
 # Test Docker setup
 docker-compose -f docker/docker-compose.dev.yml ps
@@ -396,7 +516,7 @@ pip check
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please check out our [contributing guide](CONTRIBUTING.md).
+Contributions are welcome! Please review the [Repository Guidelines](AGENTS.md) before opening a PR.
 
 ### Development Setup
 
@@ -419,7 +539,7 @@ mypy src/
 ## 📄 Documentation
 
 - **[Vector Database Research](docs/vector_db_research.md)**: Detailed analysis of vector database options
-- **[Warp Integration Guide](docs/warp_integration_guide.md)**: Complete guide to Warp Terminal integration strategies
+- **[Codex Integration Guide](docs/codex_integration_guide.md)**: Complete guide to Codex Agent integration strategies
 - **[API Documentation](docs/api.md)**: Python API reference
 - **[Deployment Guide](docs/deployment.md)**: Production deployment instructions
 
@@ -427,7 +547,7 @@ mypy src/
 
 - **Phase 1** ✅: Core vector database integration with Docker
 - **Phase 2** ✅: Basic CLI tool and LangChain integration
-- **Phase 3** ✅: Warp Terminal integration strategies
+- **Phase 3** ✅: Codex Agent integration strategies
 - **Phase 4** 🚧: Advanced features (multi-modal, team collaboration)
 - **Phase 5** 📋: Plugin ecosystem and marketplace integration
 
@@ -440,7 +560,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - [LangChain](https://langchain.com/) for the excellent framework
 - [Chroma](https://trychroma.com/) for the developer-friendly vector database
 - [Qdrant](https://qdrant.tech/) for high-performance vector search
-- [Warp Terminal](https://warp.dev/) for revolutionizing the terminal experience
+- Codex CLI (internal docs) for agent orchestration guidance
 
 ---
 

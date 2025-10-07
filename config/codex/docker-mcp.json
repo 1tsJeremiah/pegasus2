@@ -1,0 +1,11 @@
+{
+  "tools": {
+    "docker-mcp": {
+      "command": "bash",
+      "args": [
+        "scripts/codex/run_docker_mcp.sh"
+      ],
+      "description": "Local Docker MCP server exposing container management operations"
+    }
+  }
+}

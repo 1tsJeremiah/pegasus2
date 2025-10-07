@@ -1,0 +1,14 @@
+{
+  "tools": {
+    "github": {
+      "command": "bash",
+      "args": [
+        "scripts/codex/run_github_mcp.sh"
+      ],
+      "env": {
+        "GITHUB_PAT": "${env:GITHUB_PAT}"
+      },
+      "description": "GitHub MCP server (local binary)"
+    }
+  }
+}

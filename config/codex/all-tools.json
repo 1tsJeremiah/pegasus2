@@ -1,0 +1,34 @@
+{
+  "tools": {
+    "vector-cli": {
+      "command": "python3",
+      "args": [
+        "src/codex_integration/vector_cli.py"
+      ],
+      "env": {
+        "PYTHONPATH": "src",
+        "CODEX_VECTOR_BASE_URL": "http://127.0.0.1:8000",
+        "CODEX_VECTOR_DIM": "384",
+        "CODEX_EMBED_PROVIDER": "hash"
+      },
+      "description": "LangChain vector CLI for semantic knowledge management"
+    },
+    "docker-mcp": {
+      "command": "bash",
+      "args": [
+        "scripts/codex/run_docker_mcp.sh"
+      ],
+      "description": "Local Docker MCP server exposing container and image management"
+    },
+    "github": {
+      "command": "bash",
+      "args": [
+        "scripts/codex/run_github_mcp.sh"
+      ],
+      "env": {
+        "GITHUB_PAT": "${env:GITHUB_PAT}"
+      },
+      "description": "GitHub MCP server with repository, issue, and workflow access"
+    }
+  }
+}

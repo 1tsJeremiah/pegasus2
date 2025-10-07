@@ -33,7 +33,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./chroma_data:/chroma/chroma
+      - chroma_data:/chroma/chroma
 ```
 
 ### 2. Qdrant ⭐ RECOMMENDED  
@@ -62,7 +62,7 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./qdrant_data:/qdrant/storage
+      - qdrant_data:/qdrant/storage
 ```
 
 ### 3. Weaviate
@@ -123,11 +123,11 @@ vectorstore.add_documents(documents)
 results = vectorstore.similarity_search("query", k=5)
 ```
 
-## Warp Terminal Integration Opportunities
+## Codex Agent Integration Opportunities
 
 ### 1. CLI Integration
 - **Terminal Commands**: Create CLI tools for vector database management
-- **Warp Workflows**: Integration with Warp's workflow system
+- **Codex Workflows**: Integration with Codex's workflow system
 - **Command Completion**: Enhanced autocomplete for vector operations
 
 ### 2. AI-Powered Terminal Features
@@ -144,7 +144,7 @@ results = vectorstore.similarity_search("query", k=5)
 
 ```
 ┌─────────────────────┐
-│   Warp Terminal     │
+│   Codex Agent     │
 │   ┌─────────────────┤
 │   │ CLI Tools       │
 │   │ - vector-cli    │
@@ -184,15 +184,15 @@ results = vectorstore.similarity_search("query", k=5)
 - Implement advanced filtering and multi-tenancy
 - Add monitoring and scalability features
 
-### Phase 3: Warp Integration
+### Phase 3: Codex Integration
 - Develop CLI tools for vector database operations
 - Implement semantic search for terminal commands
-- Create Warp-specific workflows and integrations
+- Create Codex-specific workflows and integrations
 
 ## Next Steps
 
 1. **Prototype with Chroma**: Quick setup and LangChain integration testing
 2. **Create Docker configurations**: docker-compose for both Chroma and Qdrant
 3. **Develop integration scripts**: Python scripts for common operations
-4. **Design CLI tools**: Warp Terminal specific command-line utilities
+4. **Design CLI tools**: Codex Agent specific command-line utilities
 5. **Performance testing**: Compare vector databases under different workloads
