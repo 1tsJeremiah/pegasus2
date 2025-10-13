@@ -10,7 +10,7 @@
 ## Build, Test, and Development Commands
 - `python3 -m venv .venv && source .venv/bin/activate` prepares the local virtual environment expected by scripts.
 - `pip install -r requirements.txt` for runtime packages; append `-r requirements-dev.txt` when you need linting or tests.
-- `docker-compose -f docker/docker-compose.dev.yml up -d` launches Chroma and Meilisearch; shut down with `... down` after validation.
+- `docker-compose -f docker/docker-compose.dev.yml up -d` launches the Mindstack Core (Chroma) and Mindstack Index (Meilisearch); shut down with `... down` after validation.
 - `./.venv/bin/python src/codex_integration/vector_cli.py setup` seeds collections, and `search "query"` or `status` provide quick smoke checks.
 - `scripts/codex/launch_mcp_stack.sh` refreshes documents and starts the Codex MCP servers for end-to-end exercises.
 

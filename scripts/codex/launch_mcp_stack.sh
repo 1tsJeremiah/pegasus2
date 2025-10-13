@@ -14,9 +14,27 @@ else
   exit 1
 fi
 
-export CODEX_VECTOR_BASE_URL="${CODEX_VECTOR_BASE_URL:-http://127.0.0.1:8000/api/v2}"
+profile="${MINDSTACK_PROFILE:-dev}"
+
+if [ "$profile" = "production" ]; then
+  export CODEX_VECTOR_BASE_URL="${CODEX_VECTOR_BASE_URL:-http://127.0.0.1:6333}"
+  export CODEX_VECTOR_BACKEND="${CODEX_VECTOR_BACKEND:-qdrant}"
+else
+  export CODEX_VECTOR_BASE_URL="${CODEX_VECTOR_BASE_URL:-http://127.0.0.1:8000}"
+  export CODEX_VECTOR_BACKEND="${CODEX_VECTOR_BACKEND:-chroma}"
+fi
+
 export CODEX_VECTOR_DIM="${CODEX_VECTOR_DIM:-384}"
-export CODEX_EMBED_PROVIDER="${CODEX_EMBED_PROVIDER:-hash}"
+export CODEX_EMBED_MODEL="${CODEX_EMBED_MODEL:-all-MiniLM-L6-v2}"
+export CODEX_EMBED_PROVIDER="${CODEX_EMBED_PROVIDER:-auto}"
+
+if [ -z "${CODEX_MEILI_API_KEY:-}" ]; then
+  echo "[launch-mcp-stack] CODEX_MEILI_API_KEY is required. Set a rotated Meilisearch master key." >&2
+  exit 1
+fi
+if [[ "${CODEX_MEILI_API_KEY}" == dev-master-key-* || "${CODEX_MEILI_API_KEY}" == prod-master-key-* ]]; then
+  echo "[launch-mcp-stack] Warning: CODEX_MEILI_API_KEY appears to use a placeholder value; rotate it via your secret manager." >&2
+fi
 
 run_sync=${RUN_VECTOR_SYNC:-1}
 if [ "$run_sync" -eq 1 ]; then
@@ -44,6 +62,7 @@ start_mcp() {
 
 start_docker=${START_DOCKER_MCP:-1}
 start_github=${START_GITHUB_MCP:-1}
+start_android_adb=${START_ANDROID_ADB_MCP:-1}
 
 if [ "$start_docker" -eq 1 ]; then
   start_mcp "Docker MCP" "mcp-server-docker" scripts/codex/run_docker_mcp.sh || true
@@ -59,6 +78,16 @@ if [ "$start_github" -eq 1 ]; then
   fi
 else
   echo "[launch-mcp-stack] START_GITHUB_MCP=0 – skipping GitHub MCP"
+fi
+
+if [ "$start_android_adb" -eq 1 ]; then
+  if command -v adb >/dev/null 2>&1; then
+    start_mcp "Android ADB MCP" "android-adb-mcp-server" scripts/codex/run_android_adb_mcp.sh || true
+  else
+    echo "[launch-mcp-stack] Skipping Android ADB MCP (adb not found in PATH)"
+  fi
+else
+  echo "[launch-mcp-stack] START_ANDROID_ADB_MCP=0 – skipping Android ADB MCP"
 fi
 
 if [ "${#PIDS[@]}" -eq 0 ]; then

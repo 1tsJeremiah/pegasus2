@@ -41,6 +41,13 @@
         "CODEX_MEILI_INDEX": "codex_os_search"
       },
       "description": "Keyword search CLI backed by Meilisearch"
+    },
+    "android-adb": {
+      "command": "bash",
+      "args": [
+        "scripts/codex/run_android_adb_mcp.sh"
+      ],
+      "description": "Android ADB MCP server exposing device automation APIs"
     }
   }
 }

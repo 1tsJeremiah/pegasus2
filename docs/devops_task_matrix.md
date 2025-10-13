@@ -4,7 +4,7 @@
 
 | Service | Purpose | Health | Persistence | Notes |
 |---------|---------|--------|-------------|-------|
-| `chroma-vectordb` | Semantic vector store (Chroma) | `healthy` | `docker/chroma_data` volume | v2 heartbeat active; CLI accessible at `http://127.0.0.1:8000/api/v2` |
+| `mindstack-core` | Mindstack Core (Chroma) vector store | `healthy` | `docker/chroma_data` volume | v2 heartbeat active; CLI accessible at `http://127.0.0.1:8000/api/v2` |
 | `qdrant-vectordb` | Production-grade vector store (Qdrant) | `healthy` | `docker/qdrant_data` volume | `/healthz` probe configured; ready for future use |
 | `meili-search` | Keyword index (Meilisearch) | `healthy` | `docker/meili_data` volume | Requires ≥16-byte key; current default `dev-master-key-123456` |
 | `traefik` | Reverse proxy / TLS termination | `Up (no health check)` | Config under `~/traefik/data` | Routed via Cloudflare tunnel |
@@ -13,9 +13,9 @@
 | `webhook-server` | Node webhook for automations | `healthy` | N/A | Lives in `~/webhook-server` |
 
 ## Verified Working
-- Vector CLI (`src/codex_integration/vector_cli.py`) connects to Chroma, seeds collections, and responds to searches.
+- Vector CLI (`src/codex_integration/vector_cli.py`) connects to Mindstack Core (Chroma), seeds collections, and responds to searches.
 - Keyword CLI (`src/codex_keyword/meili_cli.py`) boots, creates indexes, and ingests files; helper script streamlines indexing.
-- Docker compose definitions now pass health checks for Chroma/Qdrant using built-in shells; restart policies on all core containers set to `unless-stopped`.
+- Docker compose definitions now pass health checks for Mindstack Core (Chroma)/Qdrant using built-in shells; restart policies on all core containers set to `unless-stopped`.
 - Bitwarden-backed helper (`~/bin/docker-master-stack.sh`) remains the control plane for production compose (`docker-compose-master.yml`).
 
 ## Known Gaps / Opportunities
@@ -23,12 +23,12 @@
 - **Keyword pipeline automation**: nightly indexing + retention policy not yet wired into cron/systemd.
 - **GUI hardening**: Pi-hole, Portainer, Traefik dashboards rely on Cloudflare auth only; no multi-factor or rate limiting configured.
 - **Monitoring/Alerting**: No centralized logging or metrics (Prometheus/Alertmanager/uptime checks) for the stack.
-- **Backups**: Chroma/Qdrant volumes lack snapshot strategy; Meilisearch index not archived.
+- **Backups**: Mindstack Core/Qdrant volumes lack snapshot strategy; Mindstack Index (Meilisearch) is not archived.
 - **Agent regression tests**: Need smoke tests ensuring CLI + keyword flows pass after updates.
 
 ## Proposed Segmented Backlog
 1. **Secrets & Configuration Hygiene**
-   - Migrate Meilisearch/Qdrant/Chroma credentials into Bitwarden exports (script now reads `CODEX_MEILI_MASTER_KEY` + optional overrides).
+   - Migrate Mindstack Index/Mindstack Core/Qdrant credentials into Bitwarden exports (script now reads `CODEX_MEILI_MASTER_KEY` + optional overrides).
    - Replace Pi-hole admin placeholder and document rotation path.
    - Extend `docker-master-stack.sh` export script to cover new env keys.
 2. **Keyword Index Automation**
