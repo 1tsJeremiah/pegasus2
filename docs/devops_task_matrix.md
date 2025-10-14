@@ -22,7 +22,7 @@
 - **Secrets hygiene**: Runtime defaults (`dev-master-key-123456`, placeholder Pi-hole password) need rotation from Bitwarden; compose files should consume the exported secrets automatically.
 - **Keyword pipeline automation**: nightly indexing + retention policy not yet wired into cron/systemd.
 - **GUI hardening**: Pi-hole, Portainer, Traefik dashboards rely on Cloudflare auth only; no multi-factor or rate limiting configured.
-- **Monitoring/Alerting**: No centralized logging or metrics (Prometheus/Alertmanager/uptime checks) for the stack.
+- **Monitoring/Alerting**: Prometheus + Grafana now available locally; still need alerting/uptime wiring.
 - **Backups**: Mindstack Core/Qdrant volumes lack snapshot strategy; Mindstack Index (Meilisearch) is not archived (restic upload support exists via `scripts/codex/backup_mindstack.sh` but needs wiring to remote storage).
 - **Agent regression tests**: Need smoke tests ensuring CLI + keyword flows pass after updates.
 
@@ -39,7 +39,7 @@
    - Schedule dashboard health checks (internal + public tunnel) via uptime monitor.
    - Evaluate access hardening: short-lived auth tokens for Portainer, Pi-hole MFA, Cloudflare Access policies per role.
 4. **Monitoring & Observability**
-   - Deploy Prometheus node exporter + docker metrics.
+   - Wire Prometheus to additional exporters (node exporter, cAdvisor) and enable Grafana alerts.
    - Integrate Loki or another log forwarder; add alarms for service restarts.
 5. **Backup & Disaster Recovery**
    - Define snapshot cadence for `docker/*_data` volumes using `scripts/codex/backup_mindstack.sh` with `RESTIC_REPOSITORY` configured.

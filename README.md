@@ -66,6 +66,7 @@ This project provides a seamless integration between:
 - **♻️ Stable Doc IDs**: Opt-in metadata-derived IDs for clean document overwrites (`CODEX_VECTOR_DOC_ID_FIELDS`)
 - **⚙️ Adaptive Qdrant Transport**: Prefers gRPC for ingestion/search throughput (`CODEX_QDRANT_USE_GRPC=0` forces HTTP)
 - **⚡ Keyword Search Companion**: Optional Meilisearch index delivers lightning-fast filename and content matches across the OS
+- **📈 Observability Suite**: Prometheus + Grafana containers for dashboards and alerting
 
 ### Preloaded Collections
 - `codex_agent`: OpenAI Codex cookbook excerpts
@@ -491,6 +492,9 @@ RESTIC_REPOSITORY=s3:s3.amazonaws.com/...    # Optional restic repo for backup_m
 RESTIC_PASSWORD_FILE=~/.config/restic/pass   # Restic password file (or export RESTIC_PASSWORD)
 RESTIC_BACKUP_ARGS="--host mindstack"        # Additional flags for restic backup
 RESTIC_FORGET_ARGS="--keep-last 7 --prune"   # Retention policy passed to restic forget
+TRAEFIK_DASHBOARD_USERS=admin:$$2y$$...      # htpasswd entry exported from Bitwarden (optional)
+GRAFANA_ADMIN_USER=grafana                  # Grafana admin username
+GRAFANA_ADMIN_PASSWORD=strong-password      # Grafana admin password (store in Bitwarden)
 ```
 
 ## 🛡️ Backups & Observability

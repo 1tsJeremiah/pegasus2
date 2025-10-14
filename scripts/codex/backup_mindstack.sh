@@ -12,7 +12,7 @@ mkdir -p "$BACKUP_ROOT"
 ARCHIVE_PREFIX="${ARCHIVE_PREFIX:-mindstack}"
 ARCHIVE_PATH="$BACKUP_ROOT/${ARCHIVE_PREFIX}-${TIMESTAMP}"
 
-VOLUMES=("chroma_data" "qdrant_data" "meili_data" "pihole_etc" "pihole_dnsmasq" "portainer_data")
+VOLUMES=("chroma_data" "qdrant_data" "meili_data" "pihole_etc" "pihole_dnsmasq" "portainer_data" "prometheus_data" "grafana_data")
 ARTIFACTS=()
 
 RESTIC_BIN="${RESTIC_BIN:-restic}"
