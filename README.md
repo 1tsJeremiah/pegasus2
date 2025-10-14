@@ -63,6 +63,8 @@ This project provides a seamless integration between:
 - **🎨 Rich Terminal UI**: Beautiful command-line interface with Rich library
 - **📊 Collection Analytics**: Built-in stats command and nightly reports surface top sources and document trends
 - **🎯 Embedding Flexibility**: Prefers `sentence-transformers` models when available and falls back to Blake2b-derived vectors for fully offline use
+- **♻️ Stable Doc IDs**: Opt-in metadata-derived IDs for clean document overwrites (`CODEX_VECTOR_DOC_ID_FIELDS`)
+- **⚙️ Adaptive Qdrant Transport**: Prefers gRPC for ingestion/search throughput (`CODEX_QDRANT_USE_GRPC=0` forces HTTP)
 - **⚡ Keyword Search Companion**: Optional Meilisearch index delivers lightning-fast filename and content matches across the OS
 
 ### Preloaded Collections
@@ -479,7 +481,23 @@ CODEX_VECTOR_COLLECTION=codex_agent     # Collection name
 CODEX_MEILI_URL=http://127.0.0.1:7700    # Meilisearch base URL
 CODEX_MEILI_API_KEY=dev-master-key-123456 # Meilisearch API key (optional for dev)
 CODEX_MEILI_INDEX=codex_os_search        # Keyword index name
+CODEX_QDRANT_USE_GRPC=1                 # Prefer Qdrant gRPC transport (set 0 to disable)
+CODEX_QDRANT_GRPC_PORT=6334             # Override gRPC port (auto +1 from HTTP port)
+CODEX_VECTOR_UPSERT_BATCH=128           # Maximum docs per upsert call
+CODEX_VECTOR_EXISTING_ID_BATCH=256      # Maximum ids per existence lookup
+CODEX_VECTOR_DOC_ID_FIELDS=source,position  # Metadata keys used to derive stable doc IDs
+CODEX_VECTOR_OVERWRITE_EXISTING=0       # Re-upsert documents when IDs already exist
+RESTIC_REPOSITORY=s3:s3.amazonaws.com/...    # Optional restic repo for backup_mindstack.sh
+RESTIC_PASSWORD_FILE=~/.config/restic/pass   # Restic password file (or export RESTIC_PASSWORD)
+RESTIC_BACKUP_ARGS="--host mindstack"        # Additional flags for restic backup
+RESTIC_FORGET_ARGS="--keep-last 7 --prune"   # Retention policy passed to restic forget
 ```
+
+## 🛡️ Backups & Observability
+
+- `scripts/codex/backup_mindstack.sh` keeps the local tarball flow and, when `RESTIC_REPOSITORY` is set (plus credentials), automatically uploads each artifact via `restic backup` and applies optional retention with `RESTIC_FORGET_ARGS`.
+- `monitoring/prometheus.yml` now scrapes cAdvisor, Qdrant, and Meilisearch metrics so dashboards can include vector-store health alongside container stats.
+- Combine both by running `RESTIC_REPOSITORY=s3:... scripts/codex/backup_mindstack.sh` under a cron/systemd timer and pointing Grafana at Prometheus for seatbelt monitoring.
 
 ### Docker Customization
 

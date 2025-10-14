@@ -23,7 +23,7 @@
 - **Keyword pipeline automation**: nightly indexing + retention policy not yet wired into cron/systemd.
 - **GUI hardening**: Pi-hole, Portainer, Traefik dashboards rely on Cloudflare auth only; no multi-factor or rate limiting configured.
 - **Monitoring/Alerting**: No centralized logging or metrics (Prometheus/Alertmanager/uptime checks) for the stack.
-- **Backups**: Mindstack Core/Qdrant volumes lack snapshot strategy; Mindstack Index (Meilisearch) is not archived.
+- **Backups**: Mindstack Core/Qdrant volumes lack snapshot strategy; Mindstack Index (Meilisearch) is not archived (restic upload support exists via `scripts/codex/backup_mindstack.sh` but needs wiring to remote storage).
 - **Agent regression tests**: Need smoke tests ensuring CLI + keyword flows pass after updates.
 
 ## Proposed Segmented Backlog
@@ -42,7 +42,7 @@
    - Deploy Prometheus node exporter + docker metrics.
    - Integrate Loki or another log forwarder; add alarms for service restarts.
 5. **Backup & Disaster Recovery**
-   - Define snapshot cadence for `docker/*_data` volumes (rsync or restic).
+   - Define snapshot cadence for `docker/*_data` volumes using `scripts/codex/backup_mindstack.sh` with `RESTIC_REPOSITORY` configured.
    - Capture Meilisearch dumps post-index.
    - Test restore runbook end-to-end.
 6. **Agent Integration & Testing**

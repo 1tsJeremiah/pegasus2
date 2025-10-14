@@ -13,7 +13,7 @@ import json
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib.parse import urlparse
 
 from .embeddings import (
@@ -28,6 +28,40 @@ DEFAULT_BASE_URL = os.environ.get("CODEX_VECTOR_BASE_URL", "http://127.0.0.1:800
 DEFAULT_TENANT = os.environ.get("CODEX_VECTOR_TENANT", "default_tenant")
 DEFAULT_DATABASE = os.environ.get("CODEX_VECTOR_DB", "default_database")
 DEFAULT_BACKEND = os.environ.get("CODEX_VECTOR_BACKEND", "auto").lower()
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    """Read boolean-ish env flags (accepts 1/true/yes/on)."""
+
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int) -> int:
+    """Read positive integer env values with a safe default."""
+
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def _chunk_items(items: Sequence[Any], size: int) -> Iterable[Sequence[Any]]:
+    for index in range(0, len(items), size):
+        yield items[index : index + size]
+
+
+EXISTING_ID_BATCH_SIZE = _env_int("CODEX_VECTOR_EXISTING_ID_BATCH", 256)
+UPSERT_BATCH_SIZE = _env_int("CODEX_VECTOR_UPSERT_BATCH", 128)
+_DOC_ID_FIELDS_RAW = os.environ.get("CODEX_VECTOR_DOC_ID_FIELDS", "")
+DOC_ID_FIELDS: Tuple[str, ...] = tuple(field.strip() for field in _DOC_ID_FIELDS_RAW.split(",") if field.strip())
+OVERWRITE_EXISTING = _env_flag("CODEX_VECTOR_OVERWRITE_EXISTING", default=False)
 
 
 # ---------------------------------------------------------------------------
@@ -181,15 +215,18 @@ class _ChromaBackend(_BaseBackend):
     def existing_ids(self, collection_id: str, ids: Sequence[str]) -> Set[str]:
         if not ids:
             return set()
-        response = self._request(
-            "POST",
-            self._tenant_path(f"/collections/{collection_id}/get"),
-            payload={"ids": list(ids), "limit": len(ids)},
-        )
-        raw_ids = response.get("ids") or []
-        if raw_ids and isinstance(raw_ids[0], list):
-            raw_ids = raw_ids[0]
-        return {str(entry) for entry in raw_ids}
+        matches: Set[str] = set()
+        for chunk in _chunk_items(list(ids), EXISTING_ID_BATCH_SIZE):
+            response = self._request(
+                "POST",
+                self._tenant_path(f"/collections/{collection_id}/get"),
+                payload={"ids": list(chunk), "limit": len(chunk)},
+            )
+            raw_ids = response.get("ids") or []
+            if raw_ids and isinstance(raw_ids[0], list):
+                raw_ids = raw_ids[0]
+            matches.update(str(entry) for entry in raw_ids)
+        return matches
 
     def upsert(
         self,
@@ -294,11 +331,34 @@ class _QdrantBackend(_BaseBackend):
         parsed = urlparse(base_url)
         if not parsed.scheme:
             base_url = f"http://{base_url}"
+            parsed = urlparse(base_url)
 
         self._raw_base_url = base_url.rstrip("/")
-        self._client = QdrantClient(url=self._raw_base_url, api_key=api_key, timeout=10.0, prefer_grpc=False)
+        prefer_grpc = _env_flag("CODEX_QDRANT_USE_GRPC", default=True)
+        grpc_port_env = os.environ.get("CODEX_QDRANT_GRPC_PORT")
+        grpc_port: Optional[int] = None
+        if prefer_grpc:
+            if grpc_port_env:
+                try:
+                    grpc_port = int(grpc_port_env)
+                except ValueError:
+                    grpc_port = None
+            elif parsed.port and parsed.port < 65535:
+                grpc_port = parsed.port + 1
+
+        client_kwargs: Dict[str, Any] = {
+            "url": self._raw_base_url,
+            "api_key": api_key,
+            "timeout": 10.0,
+            "prefer_grpc": prefer_grpc,
+        }
+        if prefer_grpc and grpc_port:
+            client_kwargs["grpc_port"] = grpc_port
+
+        self._client = QdrantClient(**client_kwargs)
         self._models = qmodels
         self._dimension = dimension
+        self._prefer_grpc = prefer_grpc and bool(getattr(self._client, "_grpc_client", None))
 
     def status(self) -> Dict[str, Any]:
         collections_resp = self._client.get_collections()
@@ -310,6 +370,7 @@ class _QdrantBackend(_BaseBackend):
         return {
             "backend": self.name,
             "base_url": self._raw_base_url,
+            "transport": "grpc" if self._prefer_grpc else "http",
             "collections": collections,
             "user": None,
         }
@@ -337,12 +398,15 @@ class _QdrantBackend(_BaseBackend):
     def existing_ids(self, collection_id: str, ids: Sequence[str]) -> Set[str]:
         if not ids:
             return set()
-        records = self._client.retrieve(
-            collection_name=collection_id,
-            ids=list(ids),
-            with_payload=False,
-        )
-        return {str(record.id) for record in records}
+        matches: Set[str] = set()
+        for chunk in _chunk_items(list(ids), EXISTING_ID_BATCH_SIZE):
+            records = self._client.retrieve(
+                collection_name=collection_id,
+                ids=list(chunk),
+                with_payload=False,
+            )
+            matches.update(str(record.id) for record in records)
+        return matches
 
     def upsert(
         self,
@@ -458,6 +522,9 @@ class CodexVectorClient:
         print("============================")
         print(f"Backend  : {backend}")
         print(f"Base URL : {summary.get('base_url', self.base_url)}")
+        transport = summary.get("transport")
+        if transport:
+            print(f"Transport: {transport}")
         if backend == "chroma":
             print(f"Tenant   : {summary.get('tenant', self.tenant)}")
             print(f"Database : {summary.get('database', self.database)}")
@@ -522,15 +589,18 @@ class CodexVectorClient:
                 base_meta["source"] = metadata_source
             base_meta.setdefault("position", idx)
 
-            stable_namespace = json.dumps(base_meta, sort_keys=True) if base_meta else metadata_source
-            doc_id = self._stable_doc_id(doc, stable_namespace)
-            base_meta.setdefault("doc_id", doc_id)
+            existing_doc_id = base_meta.get("doc_id")
+            if isinstance(existing_doc_id, str) and existing_doc_id:
+                doc_id = existing_doc_id
+            else:
+                doc_id = self._build_doc_id(doc, base_meta, metadata_source)
+                base_meta.setdefault("doc_id", doc_id)
 
             prepared_metadatas.append(base_meta)
             doc_ids.append(doc_id)
 
         existing = self._adapter.existing_ids(collection_id, doc_ids)
-        if existing and len(existing) == len(doc_ids):
+        if existing and len(existing) == len(doc_ids) and not OVERWRITE_EXISTING:
             print(
                 f"Upsert skipped: all {len(doc_ids)} document(s) already present in '{name_or_id}'."
             )
@@ -540,26 +610,49 @@ class CodexVectorClient:
         metas_to_upsert: List[Dict[str, Any]] = []
         ids_to_upsert: List[str] = []
         skipped = 0
+        replaced = 0
         for doc, meta, doc_id in zip(docs, prepared_metadatas, doc_ids):
             if doc_id in existing:
-                skipped += 1
-                continue
+                if not OVERWRITE_EXISTING:
+                    skipped += 1
+                    continue
+                replaced += 1
             docs_to_upsert.append(doc)
             metas_to_upsert.append(meta)
             ids_to_upsert.append(doc_id)
 
-        embeddings = self._embed_documents(docs_to_upsert)
-        self._adapter.upsert(
-            collection_id,
-            ids_to_upsert,
-            docs_to_upsert,
-            embeddings,
-            metas_to_upsert,
-        )
+        if not ids_to_upsert:
+            message = f"Upsert skipped: no new documents for collection '{name_or_id}'."
+            if skipped:
+                message += f" (skipped {skipped} existing)"
+            print(message)
+            return
 
-        message = f"Upserted {len(ids_to_upsert)} document(s) into collection '{name_or_id}'"
+        total_upserted = 0
+        for offset in range(0, len(ids_to_upsert), UPSERT_BATCH_SIZE):
+            batch_ids = ids_to_upsert[offset : offset + UPSERT_BATCH_SIZE]
+            batch_docs = docs_to_upsert[offset : offset + UPSERT_BATCH_SIZE]
+            batch_metas = metas_to_upsert[offset : offset + UPSERT_BATCH_SIZE]
+            embeddings = self._embed_documents(batch_docs)
+            if not embeddings:
+                continue
+            self._adapter.upsert(
+                collection_id,
+                batch_ids,
+                batch_docs,
+                embeddings,
+                batch_metas,
+            )
+            total_upserted += len(batch_ids)
+
+        message = f"Upserted {total_upserted} document(s) into collection '{name_or_id}'"
+        details: List[str] = []
+        if replaced:
+            details.append(f"replaced {replaced} existing")
         if skipped:
-            message += f" (skipped {skipped} existing)"
+            details.append(f"skipped {skipped} existing")
+        if details:
+            message += " (" + ", ".join(details) + ")"
         print(message)
 
     def query(self, name_or_id: str, query_text: str, *, limit: int = 5) -> None:
@@ -601,6 +694,36 @@ class CodexVectorClient:
                 return [vector.tolist() for vector in vectors]
 
         return [generate_embedding(text, self.dimension) for text in docs]
+
+    def _build_doc_id(self, content: str, metadata: Dict[str, Any], metadata_source: Optional[str]) -> str:
+        candidate = self._doc_id_from_fields(metadata)
+        if candidate:
+            return candidate
+
+        namespace_meta = {key: value for key, value in metadata.items() if key != "doc_id"}
+        stable_namespace = ""
+        if namespace_meta:
+            stable_namespace = json.dumps(namespace_meta, sort_keys=True, separators=(",", ":"), default=str)
+        if not stable_namespace:
+            stable_namespace = metadata_source or ""
+        return self._stable_doc_id(content, stable_namespace or None)
+
+    @staticmethod
+    def _doc_id_from_fields(metadata: Dict[str, Any]) -> Optional[str]:
+        if not DOC_ID_FIELDS:
+            return None
+        components: List[str] = []
+        for field in DOC_ID_FIELDS:
+            if field not in metadata:
+                return None
+            value = metadata[field]
+            try:
+                serialised = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+            except TypeError:
+                serialised = repr(value)
+            components.append(f"{field}={serialised}")
+        key = "|".join(components)
+        return CodexVectorClient._stable_doc_id(key, namespace="metadata")
 
     @staticmethod
     def _stable_doc_id(content: str, namespace: Optional[str] = None) -> str:
