@@ -20,11 +20,34 @@ else:
 app = typer.Typer(help="Keyword search utilities backed by Meilisearch")
 
 DEFAULT_INDEX = os.environ.get("CODEX_MEILI_INDEX", "codex_os_search")
-DEFAULT_INCLUDE = {".md", ".txt", ".log", ".conf", ".ini", ".yaml", ".yml", ".py", ".sh", ".service", ".json"}
-DEFAULT_EXCLUDE_DIRS = {".git", "node_modules", "__pycache__", "venv", ".venv", "vendor", "build", "dist"}
+DEFAULT_INCLUDE = {
+    ".md",
+    ".txt",
+    ".log",
+    ".conf",
+    ".ini",
+    ".yaml",
+    ".yml",
+    ".py",
+    ".sh",
+    ".service",
+    ".json",
+}
+DEFAULT_EXCLUDE_DIRS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "venv",
+    ".venv",
+    "vendor",
+    "build",
+    "dist",
+}
 
 
-def _iter_files(paths: Iterable[Path], *, include: set[str], exclude_dirs: set[str], max_bytes: int) -> Iterable[Path]:
+def _iter_files(
+    paths: Iterable[Path], *, include: set[str], exclude_dirs: set[str], max_bytes: int
+) -> Iterable[Path]:
     for base in paths:
         if not base.exists():
             continue
@@ -37,7 +60,9 @@ def _iter_files(paths: Iterable[Path], *, include: set[str], exclude_dirs: set[s
             if path.is_dir():
                 if path.name in exclude_dirs:
                     # skip entire subtree
-                    dirs_to_skip = [p for p in path.iterdir()]  # exhaust to avoid recursion
+                    dirs_to_skip = [
+                        p for p in path.iterdir()
+                    ]  # exhaust to avoid recursion
                     continue
                 continue
             if include and path.suffix and path.suffix.lower() not in include:
@@ -69,11 +94,16 @@ def status(
     client = KeywordSearchClient(index_name=index)
     typer.echo("Meilisearch status")
     typer.echo("==================")
-    typer.echo(json.dumps({
-        "health": client.health(),
-        "version": client.version(),
-        "indexes": client.list_indexes(),
-    }, indent=2))
+    typer.echo(
+        json.dumps(
+            {
+                "health": client.health(),
+                "version": client.version(),
+                "indexes": client.list_indexes(),
+            },
+            indent=2,
+        )
+    )
 
 
 @app.command()
@@ -105,25 +135,42 @@ def drop(
 
 @app.command()
 def index_path(
-    paths: List[Path] = typer.Argument(..., exists=True, help="Files or directories to index"),
+    paths: List[Path] = typer.Argument(
+        ..., exists=True, help="Files or directories to index"
+    ),
     index: str = typer.Option(DEFAULT_INDEX, "--index", help="Target index"),
-    include: List[str] = typer.Option(list(DEFAULT_INCLUDE), "--include", help="File extensions to include"),
-    exclude_dir: List[str] = typer.Option(list(DEFAULT_EXCLUDE_DIRS), "--exclude-dir", help="Directory names to ignore"),
-    max_bytes: int = typer.Option(4_000_000, "--max-bytes", help="Skip files larger than this many bytes"),
-    batch_size: int = typer.Option(500, "--batch-size", help="Documents to send per batch"),
-    source_prefix: Optional[str] = typer.Option(None, "--source-prefix", help="Prefix stored with each source path"),
+    include: List[str] = typer.Option(
+        list(DEFAULT_INCLUDE), "--include", help="File extensions to include"
+    ),
+    exclude_dir: List[str] = typer.Option(
+        list(DEFAULT_EXCLUDE_DIRS), "--exclude-dir", help="Directory names to ignore"
+    ),
+    max_bytes: int = typer.Option(
+        4_000_000, "--max-bytes", help="Skip files larger than this many bytes"
+    ),
+    batch_size: int = typer.Option(
+        500, "--batch-size", help="Documents to send per batch"
+    ),
+    source_prefix: Optional[str] = typer.Option(
+        None, "--source-prefix", help="Prefix stored with each source path"
+    ),
 ) -> None:
     """Index the given files/directories into Meilisearch."""
 
     client = KeywordSearchClient(index_name=index)
     client.ensure_index(index=index, primary_key="id")
 
-    include_set = {suffix.lower() if suffix.startswith('.') else f'.{suffix.lower()}' for suffix in include}
+    include_set = {
+        suffix.lower() if suffix.startswith(".") else f".{suffix.lower()}"
+        for suffix in include
+    }
     exclude_dirs = set(exclude_dir)
 
     documents = []
     total = 0
-    for path in _iter_files(paths, include=include_set, exclude_dirs=exclude_dirs, max_bytes=max_bytes):
+    for path in _iter_files(
+        paths, include=include_set, exclude_dirs=exclude_dirs, max_bytes=max_bytes
+    ):
         content = _read_file(path)
         if not content:
             continue
@@ -152,7 +199,9 @@ def search(
     query: str = typer.Argument(..., help="Query string"),
     index: str = typer.Option(DEFAULT_INDEX, "--index", help="Index to search"),
     limit: int = typer.Option(10, "--limit", help="Maximum hits to return"),
-    json_output: Optional[Path] = typer.Option(None, "--json", help="Optional output path for raw JSON"),
+    json_output: Optional[Path] = typer.Option(
+        None, "--json", help="Optional output path for raw JSON"
+    ),
 ) -> None:
     """Run a keyword search and display the top hits."""
 

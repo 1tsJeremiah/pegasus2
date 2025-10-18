@@ -11,15 +11,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .embeddings import (
-    DEFAULT_DIMENSION,
-    generate_embedding,
-    get_dimension,
-    get_model_name,
-    load_sentence_transformer,
-)
+from .embeddings import (DEFAULT_DIMENSION, generate_embedding, get_dimension,
+                         get_model_name, load_sentence_transformer)
 
-DEFAULT_BASE_URL = os.environ.get("CODEX_VECTOR_BASE_URL", "http://127.0.0.1:8000/api/v2")
+DEFAULT_BASE_URL = os.environ.get(
+    "CODEX_VECTOR_BASE_URL", "http://127.0.0.1:8000/api/v2"
+)
 DEFAULT_TENANT = os.environ.get("CODEX_VECTOR_TENANT", "default_tenant")
 DEFAULT_DATABASE = os.environ.get("CODEX_VECTOR_DB", "default_database")
 
@@ -76,7 +73,9 @@ class CodexVectorClient:
             url = f"{url}?{urlencode(params)}"
 
         data = json.dumps(payload).encode() if payload is not None else None
-        req = Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
+        req = Request(
+            url, data=data, method=method, headers={"Content-Type": "application/json"}
+        )
 
         try:
             with urlopen(req, timeout=10) as resp:
@@ -127,14 +126,18 @@ class CodexVectorClient:
         print(f"Created collection {payload.get('name')} :: id={payload.get('id')}")
 
     def get_collection_id(self, name_or_id: str) -> str:
-        collections = self._request("GET", self._tenant_path("/collections")).payload or []
+        collections = (
+            self._request("GET", self._tenant_path("/collections")).payload or []
+        )
         for entry in collections:
             if entry["id"] == name_or_id or entry["name"] == name_or_id:
                 return entry["id"]
         raise RuntimeError(f"Collection '{name_or_id}' not found")
 
     def ensure_collection(self, name: str) -> str:
-        collections = self._request("GET", self._tenant_path("/collections")).payload or []
+        collections = (
+            self._request("GET", self._tenant_path("/collections")).payload or []
+        )
         for entry in collections:
             if entry["name"] == name:
                 return entry["id"]
@@ -172,7 +175,11 @@ class CodexVectorClient:
             "ids": [
                 self._stable_doc_id(
                     text,
-                    json.dumps(metadata_items[idx], sort_keys=True) if metadata_items else metadata_source,
+                    (
+                        json.dumps(metadata_items[idx], sort_keys=True)
+                        if metadata_items
+                        else metadata_source
+                    ),
                 )
                 for idx, text in enumerate(docs)
             ],
@@ -213,12 +220,16 @@ class CodexVectorClient:
 
         for result in results:
             dist = result.get("distance")
-            distance_repr = f"{dist:.4f}" if isinstance(dist, (int, float)) else str(dist or "?")
+            distance_repr = (
+                f"{dist:.4f}" if isinstance(dist, (int, float)) else str(dist or "?")
+            )
             print(f"  - distance={distance_repr} :: {result['document']}")
             if result.get("metadata"):
                 print(f"      metadata={result['metadata']}")
 
-    def query_results(self, name_or_id: str, query_text: str, *, limit: int = 5) -> List[dict]:
+    def query_results(
+        self, name_or_id: str, query_text: str, *, limit: int = 5
+    ) -> List[dict]:
         collection_id = self.get_collection_id(name_or_id)
         embedding = self._embed_documents([query_text])[0]
         response = self._request(
@@ -232,7 +243,9 @@ class CodexVectorClient:
         )
         return self._parse_query_results(response.payload)
 
-    def iter_metadata(self, name_or_id: str, *, batch_size: int = 500) -> Iterable[Dict[str, Any]]:
+    def iter_metadata(
+        self, name_or_id: str, *, batch_size: int = 500
+    ) -> Iterable[Dict[str, Any]]:
         collection_id = self.get_collection_id(name_or_id)
         offset = 0
         while True:
@@ -324,7 +337,9 @@ class CodexVectorClient:
         for idx, doc in enumerate(docs):
             distance = dists[idx] if idx < len(dists) else None
             metadata = metas[idx] if idx < len(metas) else {}
-            results.append({"document": doc, "distance": distance, "metadata": metadata})
+            results.append(
+                {"document": doc, "distance": distance, "metadata": metadata}
+            )
         return results
 
     @staticmethod
@@ -344,4 +359,9 @@ class CodexVectorClient:
         return metadatas
 
 
-__all__ = ["CodexVectorClient", "DEFAULT_BASE_URL", "DEFAULT_TENANT", "DEFAULT_DATABASE"]
+__all__ = [
+    "CodexVectorClient",
+    "DEFAULT_BASE_URL",
+    "DEFAULT_TENANT",
+    "DEFAULT_DATABASE",
+]

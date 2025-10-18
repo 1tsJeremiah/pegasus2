@@ -155,19 +155,28 @@ def _embedding_function() -> Embeddings:
             try:
                 return OpenAIEmbeddings(model=target_model)
             except Exception as exc:  # pragma: no cover - runtime guard
-                typer.secho(f"OpenAI embeddings failed ({exc}); falling back", fg=typer.colors.YELLOW)
+                typer.secho(
+                    f"OpenAI embeddings failed ({exc}); falling back",
+                    fg=typer.colors.YELLOW,
+                )
         elif api_key and provider == "openai":
             try:
                 return OpenAIEmbeddings()
             except Exception as exc:  # pragma: no cover - runtime guard
-                typer.secho(f"OpenAI embeddings failed ({exc}); falling back", fg=typer.colors.YELLOW)
+                typer.secho(
+                    f"OpenAI embeddings failed ({exc}); falling back",
+                    fg=typer.colors.YELLOW,
+                )
 
     if provider in {"huggingface", "auto"} and HuggingFaceEmbeddings is not None:
         if model:
             try:
                 return HuggingFaceEmbeddings(model_name=model)
             except Exception as exc:  # pragma: no cover - runtime guard
-                typer.secho(f"HuggingFace embeddings failed ({exc}); falling back", fg=typer.colors.YELLOW)
+                typer.secho(
+                    f"HuggingFace embeddings failed ({exc}); falling back",
+                    fg=typer.colors.YELLOW,
+                )
 
     return HashEmbeddings(dim)
 
@@ -205,7 +214,9 @@ def _client(config: AppConfig) -> ClientAPI:
     )
 
 
-def _vectorstore(config: AppConfig, collection_name: str, create: bool = False) -> Chroma:
+def _vectorstore(
+    config: AppConfig, collection_name: str, create: bool = False
+) -> Chroma:
     client = _client(config)
     metadata = {"hnsw:space": "cosine"}
     if create:
@@ -262,7 +273,9 @@ def _iter_metadata(collection, batch_size: int = 500) -> Iterable[Dict[str, obje
     offset = 0
     total = collection.count()
     while offset < total:
-        response = collection.get(include=["metadatas"], limit=batch_size, offset=offset)
+        response = collection.get(
+            include=["metadatas"], limit=batch_size, offset=offset
+        )
         metadatas = response.get("metadatas") or []
         yielded = False
         for meta in _flatten_metadatas(metadatas):
@@ -277,11 +290,18 @@ def _command_summary(collection, top: int) -> Dict[str, object]:
     metadata = list(_iter_metadata(collection))
     total_docs = collection.count()
     by_source = Counter((meta.get("source") or "(unknown)") for meta in metadata)
-    by_doc_id = Counter((meta.get("doc_id") or "(missing)") for meta in metadata if meta.get("doc_id"))
-    by_title = Counter((meta.get("title") or "(missing)") for meta in metadata if meta.get("title"))
+    by_doc_id = Counter(
+        (meta.get("doc_id") or "(missing)") for meta in metadata if meta.get("doc_id")
+    )
+    by_title = Counter(
+        (meta.get("title") or "(missing)") for meta in metadata if meta.get("title")
+    )
 
     def _format(counter: Counter[str]) -> List[Dict[str, object]]:
-        return [{"value": value, "count": count} for value, count in counter.most_common(top)]
+        return [
+            {"value": value, "count": count}
+            for value, count in counter.most_common(top)
+        ]
 
     return {
         "collection": collection.name,
@@ -362,7 +382,9 @@ def list_collections(ctx: typer.Context) -> None:
 
 
 @app.command()
-def create(ctx: typer.Context, collection: str = typer.Argument(..., help="Collection name")) -> None:
+def create(
+    ctx: typer.Context, collection: str = typer.Argument(..., help="Collection name")
+) -> None:
     """Create a collection if it does not already exist."""
 
     config: AppConfig = ctx.obj
@@ -377,7 +399,9 @@ def query(
     ctx: typer.Context,
     query_text: str = typer.Argument(..., help="Free form query text"),
     collection: str = typer.Option(None, "--collection", help="Collection to query"),
-    limit: int = typer.Option(5, "--limit", min=1, max=50, help="Maximum number of results"),
+    limit: int = typer.Option(
+        5, "--limit", min=1, max=50, help="Maximum number of results"
+    ),
 ) -> None:
     """Run a similarity search using LangChain and print scored results."""
 
@@ -403,11 +427,15 @@ def search(
     ctx: typer.Context,
     query_text: str = typer.Argument(..., help="Free form query text"),
     collection: str = typer.Option(None, "--collection", help="Collection to query"),
-    limit: int = typer.Option(5, "--limit", min=1, max=50, help="Maximum number of results"),
+    limit: int = typer.Option(
+        5, "--limit", min=1, max=50, help="Maximum number of results"
+    ),
 ) -> None:
     """Alias for ``query``."""
 
-    ctx.invoke(query, ctx=ctx, query_text=query_text, collection=collection, limit=limit)
+    ctx.invoke(
+        query, ctx=ctx, query_text=query_text, collection=collection, limit=limit
+    )
 
 
 @app.command()
@@ -415,7 +443,9 @@ def add(
     ctx: typer.Context,
     content: str = typer.Argument(..., help="Document text to store"),
     collection: str = typer.Option(None, "--collection", help="Target collection"),
-    source: Optional[str] = typer.Option(None, "--source", help="Optional metadata source"),
+    source: Optional[str] = typer.Option(
+        None, "--source", help="Optional metadata source"
+    ),
 ) -> None:
     """Add a single document to a collection."""
 
@@ -425,7 +455,9 @@ def add(
 
     metadata = {"source": source or DEFAULT_TAG}
     doc_id = _stable_doc_id(content, source)
-    vectorstore.add_texts([content], metadatas=[{**metadata, "doc_id": doc_id}], ids=[doc_id])
+    vectorstore.add_texts(
+        [content], metadatas=[{**metadata, "doc_id": doc_id}], ids=[doc_id]
+    )
     typer.echo(f"Stored document in '{target_collection}' with id={doc_id}")
 
 
@@ -488,7 +520,9 @@ def upsert(
 def stats(
     ctx: typer.Context,
     collection: str = typer.Option(None, "--collection", help="Collection to inspect"),
-    top: int = typer.Option(5, "--top", min=1, max=50, help="Top metadata values to display"),
+    top: int = typer.Option(
+        5, "--top", min=1, max=50, help="Top metadata values to display"
+    ),
     json_output: Optional[Path] = typer.Option(
         None,
         "--json",
@@ -537,7 +571,9 @@ def setup(
         docs.append(payload)
         metadatas.append({"source": "setup", "doc_id": doc_id, "position": idx})
 
-    vectorstore.add_texts(docs, metadatas=metadatas, ids=[meta["doc_id"] for meta in metadatas])
+    vectorstore.add_texts(
+        docs, metadatas=metadatas, ids=[meta["doc_id"] for meta in metadatas]
+    )
     typer.echo(f"Seeded {len(docs)} command snippets into '{target_collection}'")
 
 

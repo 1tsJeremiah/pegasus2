@@ -47,9 +47,7 @@ DOC_SPECS: List[Dict[str, str]] = [
     },
 ]
 
-HEADERS = {
-    "User-Agent": "Codex-Agent/1.0 (+https://github.com/openai)"
-}
+HEADERS = {"User-Agent": "Codex-Agent/1.0 (+https://github.com/openai)"}
 
 
 def html_to_text(html: str) -> str:
@@ -70,11 +68,21 @@ def fetch_text(spec: Dict[str, str]) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fetch infrastructure docs and store in the vector DB")
-    parser.add_argument("--collection", default="infra-docs", help="Target collection name")
-    parser.add_argument("--max-chars", type=int, default=900, help="Chunk size for ingestion")
-    parser.add_argument("--overlap", type=int, default=150, help="Chunk overlap for ingestion")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for upserts")
+    parser = argparse.ArgumentParser(
+        description="Fetch infrastructure docs and store in the vector DB"
+    )
+    parser.add_argument(
+        "--collection", default="infra-docs", help="Target collection name"
+    )
+    parser.add_argument(
+        "--max-chars", type=int, default=900, help="Chunk size for ingestion"
+    )
+    parser.add_argument(
+        "--overlap", type=int, default=150, help="Chunk overlap for ingestion"
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=16, help="Batch size for upserts"
+    )
     parser.add_argument(
         "--dest",
         type=Path,

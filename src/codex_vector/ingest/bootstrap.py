@@ -52,7 +52,9 @@ def collect_documents(paths: List[Path], *, max_chars: int, overlap: int) -> Lis
         if not path.exists() or not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
-        for index, chunk in enumerate(chunk_text(text, max_chars=max_chars, overlap=overlap), start=1):
+        for index, chunk in enumerate(
+            chunk_text(text, max_chars=max_chars, overlap=overlap), start=1
+        ):
             documents.append(
                 {
                     "text": chunk,
@@ -67,10 +69,18 @@ def collect_documents(paths: List[Path], *, max_chars: int, overlap: int) -> Lis
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Seed the Codex vector database with project docs")
-    parser.add_argument("--collection", default="codex_agent", help="Collection name to populate")
-    parser.add_argument("--max-chars", type=int, default=900, help="Chunk size for document splitting")
-    parser.add_argument("--overlap", type=int, default=150, help="Character overlap between chunks")
+    parser = argparse.ArgumentParser(
+        description="Seed the Codex vector database with project docs"
+    )
+    parser.add_argument(
+        "--collection", default="codex_agent", help="Collection name to populate"
+    )
+    parser.add_argument(
+        "--max-chars", type=int, default=900, help="Chunk size for document splitting"
+    )
+    parser.add_argument(
+        "--overlap", type=int, default=150, help="Character overlap between chunks"
+    )
     parser.add_argument(
         "--paths",
         nargs="*",
@@ -78,11 +88,18 @@ def main() -> int:
         default=DEFAULT_FILES,
         help="Files to ingest (defaults to key project docs)",
     )
-    parser.add_argument("--batch-size", type=int, default=16, help="Number of chunks to upsert per request")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=16,
+        help="Number of chunks to upsert per request",
+    )
     args = parser.parse_args()
 
     cli = CodexVectorClient()
-    docs = collect_documents(list(args.paths), max_chars=args.max_chars, overlap=args.overlap)
+    docs = collect_documents(
+        list(args.paths), max_chars=args.max_chars, overlap=args.overlap
+    )
     if not docs:
         print("No documents found to ingest.")
         return 0

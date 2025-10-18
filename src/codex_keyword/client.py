@@ -37,7 +37,13 @@ class KeywordSearchClient:
     # Management helpers
     # ------------------------------------------------------------------
 
-    def ensure_index(self, index: Optional[str] = None, *, primary_key: str = "id", settings: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def ensure_index(
+        self,
+        index: Optional[str] = None,
+        *,
+        primary_key: str = "id",
+        settings: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         target = index or self.index_name
         try:
             handle = self._client.get_index(target)
@@ -61,7 +67,13 @@ class KeywordSearchClient:
     # Document operations
     # ------------------------------------------------------------------
 
-    def add_documents(self, documents: Iterable[Dict[str, Any]], *, index: Optional[str] = None, batch_size: int = 1000) -> Dict[str, Any]:
+    def add_documents(
+        self,
+        documents: Iterable[Dict[str, Any]],
+        *,
+        index: Optional[str] = None,
+        batch_size: int = 1000,
+    ) -> Dict[str, Any]:
         collection = list(documents)
         target = self.index(index)
         response: Optional[Dict[str, Any]] = None
@@ -72,7 +84,9 @@ class KeywordSearchClient:
             response = target.add_documents(chunk)
         return response or {"status": "enqueued", "total": len(collection)}
 
-    def search(self, query: str, *, index: Optional[str] = None, limit: int = 20) -> Dict[str, Any]:
+    def search(
+        self, query: str, *, index: Optional[str] = None, limit: int = 20
+    ) -> Dict[str, Any]:
         handle = self.index(index)
         return handle.search(query, {"limit": limit})
 

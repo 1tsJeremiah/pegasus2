@@ -96,7 +96,9 @@ def fetch_with_playwright(specs: List[DocSpec], dest_dir: Path) -> None:
     if not specs:
         return
     if sync_playwright is None:
-        raise RuntimeError("playwright is not installed; run `pip install playwright && playwright install chromium`." )
+        raise RuntimeError(
+            "playwright is not installed; run `pip install playwright && playwright install chromium`."
+        )
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -109,12 +111,16 @@ def fetch_with_playwright(specs: List[DocSpec], dest_dir: Path) -> None:
             page.goto(spec.page_url, wait_until="networkidle")  # type: ignore[arg-type]
             response = context.request.get(spec.download_url)
             if not response.ok:
-                raise RuntimeError(f"Failed to download {spec.title}: HTTP {response.status}")
+                raise RuntimeError(
+                    f"Failed to download {spec.title}: HTTP {response.status}"
+                )
             target.write_bytes(response.body())
         browser.close()
 
 
-def download_documents(specs: List[DocSpec], dest_dir: Path, force: bool = False) -> List[Path]:
+def download_documents(
+    specs: List[DocSpec], dest_dir: Path, force: bool = False
+) -> List[Path]:
     dest_dir.mkdir(parents=True, exist_ok=True)
     downloaded: List[Path] = []
 
@@ -214,7 +220,9 @@ def ingest_pdfs(
         documents: List[str] = []
         metadatas: List[dict] = []
         for index, (text, start_page, end_page) in enumerate(
-            chunk_paragraphs(extract_paragraphs(pdf_path), chunk_size=chunk_size, overlap=overlap),
+            chunk_paragraphs(
+                extract_paragraphs(pdf_path), chunk_size=chunk_size, overlap=overlap
+            ),
             start=1,
         ):
             documents.append(text)
@@ -235,21 +243,44 @@ def ingest_pdfs(
             print(f"⚠️  No extractable text found in {pdf_path}")
             continue
 
-        cli.upsert(collection, documents, metadata_items=metadatas, create_collection=True)
+        cli.upsert(
+            collection, documents, metadata_items=metadatas, create_collection=True
+        )
         print(f"Ingested {len(documents)} chunks from {spec.title}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest Ubuntu documentation PDFs")
-    parser.add_argument("--collection", default="ubuntu-docs", help="Target collection name")
-    parser.add_argument("--dest", type=Path, default=Path("data/ubuntu/pdf"), help="Directory to store downloaded PDFs")
-    parser.add_argument("--chunk-size", type=int, default=1800, help="Maximum characters per chunk")
-    parser.add_argument("--overlap", type=int, default=250, help="Characters of overlap between chunks")
-    parser.add_argument("--force-download", action="store_true", help="Refresh PDFs even if they already exist")
+    parser.add_argument(
+        "--collection", default="ubuntu-docs", help="Target collection name"
+    )
+    parser.add_argument(
+        "--dest",
+        type=Path,
+        default=Path("data/ubuntu/pdf"),
+        help="Directory to store downloaded PDFs",
+    )
+    parser.add_argument(
+        "--chunk-size", type=int, default=1800, help="Maximum characters per chunk"
+    )
+    parser.add_argument(
+        "--overlap", type=int, default=250, help="Characters of overlap between chunks"
+    )
+    parser.add_argument(
+        "--force-download",
+        action="store_true",
+        help="Refresh PDFs even if they already exist",
+    )
     args = parser.parse_args()
 
     downloaded = download_documents(DOC_SPECS, args.dest, force=args.force_download)
-    ingest_pdfs(DOC_SPECS, downloaded, collection=args.collection, chunk_size=args.chunk_size, overlap=args.overlap)
+    ingest_pdfs(
+        DOC_SPECS,
+        downloaded,
+        collection=args.collection,
+        chunk_size=args.chunk_size,
+        overlap=args.overlap,
+    )
     return 0
 
 
