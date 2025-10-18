@@ -7,6 +7,21 @@ cd "$REPO_DIR"
 
 mkdir -p data/codex/official_docs logs/codex
 
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
+MASTER_ENV="$HOME/.config/docker/master-stack.env"
+if [ -f "$MASTER_ENV" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$MASTER_ENV"
+  set +a
+fi
+
 if [ -f .venv/bin/activate ]; then
   # shellcheck disable=SC1091
   source .venv/bin/activate

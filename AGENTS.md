@@ -13,6 +13,13 @@
 - `docker-compose -f docker/docker-compose.dev.yml up -d` launches the Mindstack Core (Chroma) and Mindstack Index (Meilisearch); shut down with `... down` after validation.
 - `./.venv/bin/python src/codex_integration/vector_cli.py setup` seeds collections, and `search "query"` or `status` provide quick smoke checks.
 - `scripts/codex/launch_mcp_stack.sh` refreshes documents and starts the Codex MCP servers for end-to-end exercises.
+- `scripts/codex/mindstack_watchdog.sh` keeps Mindstack reachable by polling `vector_cli status` and restarting compose services when needed.
+- `scripts/codex/run_bitwarden_mcp.sh` launches the Bitwarden MCP server (requires `BW_SESSION` and a local clone at `~/bitwarden-mcp-server`; set `START_BITWARDEN_MCP=1` for the launch helper).
+- `scripts/codex/run_google_mcp.sh` launches the Google Workspace MCP server in read-only mode (expects the `mcp-google` repo at `~/mcp-google` and OAuth secrets under `~/.config/mindstack/google/<profile>/`; enable via `START_GOOGLE_MCP=1`).
+
+## Ingestion Utilities
+- `scripts/codex/ingest_desktop_to_mindstack.py` ingests non-audio Desktop artifacts into the `codex_agent` collection (supports `--dry-run`).
+- `scripts/codex/ingest_google_workspace.py` reads Gmail/Drive content using the OAuth tokens stored for the MCP server and indexes chunks into `gx_gmail_<profile>` / `gx_drive_<profile>`.
 
 ## Coding Style & Naming Conventions
 - Target Python 3.8+ with four-space indentation, useful type hints, and docstrings on public entrypoints.

@@ -102,7 +102,7 @@ For GitHub integration, copy `config/codex/github-mcp.json` and launch `scripts/
 
 If you need Android device automation, copy `config/codex/android-adb-mcp.json` and run `scripts/codex/run_android_adb_mcp.sh`.
 
-For the mobile Codex workflow and one-tap launcher, see `docs/mindstack_mobile.md`. Install the Android Platform Tools so `adb` is available, and connect a device or start an emulator before launching.
+Review `docs/mindstack_connectivity.md` for notes on keeping the local Mindstack stack responsive during long-running sessions.
 
 ### Routine health check
 

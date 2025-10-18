@@ -16,6 +16,7 @@
 - Vector CLI (`src/codex_integration/vector_cli.py`) connects to Mindstack Core (Chroma), seeds collections, and responds to searches.
 - Keyword CLI (`src/codex_keyword/meili_cli.py`) boots, creates indexes, and ingests files; helper script streamlines indexing.
 - Docker compose definitions now pass health checks for Mindstack Core (Chroma)/Qdrant using built-in shells; restart policies on all core containers set to `unless-stopped`.
+- `scripts/codex/launch_mcp_stack.sh` now waits for Mindstack to respond and starts the watchdog so Codex agents keep their memory backend.
 - Bitwarden-backed helper (`~/bin/docker-master-stack.sh`) remains the control plane for production compose (`docker-compose-master.yml`).
 
 ## Known Gaps / Opportunities

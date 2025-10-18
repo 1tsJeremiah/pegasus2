@@ -34,17 +34,17 @@ export OPENAI_API_KEY="your-api-key-here"
 
 ## 🧠 Mindstack (Pegasus Memory)
 
-Mindstack is the Pegasus memory stack that bundles the Chroma vector store, the Meilisearch keyword index, and the supporting MCP launch scripts. When agents refer to "Mindstack" they can assume the full package is available: vector search, keyword lookup, and the orchestration helpers that keep them in sync.
+Mindstack is the local Pegasus memory stack that bundles the Chroma vector store (transitioning to Qdrant), the Meilisearch keyword index, and the supporting MCP launch scripts. When agents refer to "Mindstack" they can assume the full package is available: vector search, keyword lookup, and the orchestration helpers that keep them in sync.
 
-- **Mindstack Core (Chroma)** powers local development by default. Set `MINDSTACK_PROFILE=production` (or override `CODEX_VECTOR_BACKEND=qdrant`) to promote Qdrant for production workloads.
+- **Mindstack Core (Chroma → Qdrant)** powers local development by default. Set `MINDSTACK_PROFILE=production` (or override `CODEX_VECTOR_BACKEND=qdrant`) to promote Qdrant while the migration is underway.
 - **Mindstack Index (Meilisearch)** surfaces fast keyword matches across the filesystem and curated documents.
 - **Mindstack Observability** layers Prometheus + cAdvisor for metrics and ships a snapshot helper for persistent volumes.
 - **Mindstack Orchestrator (MCP scripts)** launches Docker, GitHub, Android ADB, and other optional servers so Codex can automate the environment.
+- **Mindstack Reliability**: `scripts/codex/launch_mcp_stack.sh` now waits for the stack to answer before starting MCP servers and boots `scripts/codex/mindstack_watchdog.sh` to keep connections healthy.
 
-Mindstack is the preferred name to use in playbooks, prompts, and documentation—agents no longer need to reference "the Chroma/Meili stack" explicitly.
+Mindstack is the preferred name to use in playbooks, prompts, and documentation—agents do not need to reference "the Chroma/Meili stack" explicitly.
 
-For the mobile workflow and one-tap launch instructions, see `docs/mindstack_mobile.md`.
-Ingest `docs/mindstack_mobile.md` into Mindstack so agents always have the mobile playbook within reach.
+Refer to `docs/mindstack_connectivity.md` for operational notes on keeping Mindstack reachable.
 
 ## 🎯 Project Overview
 

@@ -23,6 +23,34 @@ SRC_ROOT = Path(__file__).resolve().parent.parent
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+PROJECT_ROOT = SRC_ROOT.parent
+
+
+def _load_workspace_env() -> None:
+    """Load .env variables so CLI defaults match Mindstack runtime."""
+
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+
+    try:
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key or key in os.environ:
+                continue
+            value = value.strip().strip('"').strip("'")
+            os.environ[key] = value
+    except OSError:
+        # Silently ignore unreadable .env to avoid breaking the CLI.
+        return
+
+
+_load_workspace_env()
+
 from codex_vector.client import (  # noqa: E402  # pylint: disable=wrong-import-position
     CodexVectorClient,
     DEFAULT_BASE_URL,

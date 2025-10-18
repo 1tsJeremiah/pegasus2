@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
@@ -62,6 +63,8 @@ UPSERT_BATCH_SIZE = _env_int("CODEX_VECTOR_UPSERT_BATCH", 128)
 _DOC_ID_FIELDS_RAW = os.environ.get("CODEX_VECTOR_DOC_ID_FIELDS", "")
 DOC_ID_FIELDS: Tuple[str, ...] = tuple(field.strip() for field in _DOC_ID_FIELDS_RAW.split(",") if field.strip())
 OVERWRITE_EXISTING = _env_flag("CODEX_VECTOR_OVERWRITE_EXISTING", default=False)
+HTTP_RETRIES = _env_int("CODEX_VECTOR_HTTP_RETRIES", 3)
+HTTP_RETRY_DELAY = _env_int("CODEX_VECTOR_HTTP_RETRY_DELAY", 2)
 
 
 # ---------------------------------------------------------------------------
@@ -142,20 +145,31 @@ class _ChromaBackend(_BaseBackend):
         data = _json.dumps(payload).encode() if payload is not None else None
         req = Request(url, data=data, method=method, headers={"Content-Type": "application/json"})
 
-        try:
-            with urlopen(req, timeout=10) as resp:
-                content = resp.read().decode()
-                if not content:
-                    return {"status": resp.status}
-                try:
-                    return _json.loads(content)
-                except _json.JSONDecodeError:
-                    return {"status": resp.status, "raw": content}
-        except HTTPError as exc:  # pragma: no cover - runtime guard
-            body = exc.read().decode()
-            raise RuntimeError(f"HTTP {exc.code} {exc.reason}: {body}") from exc
-        except URLError as exc:  # pragma: no cover - runtime guard
-            raise RuntimeError(f"Connection failed: {exc}") from exc
+        last_error: Optional[Exception] = None
+        attempts = max(1, HTTP_RETRIES)
+        for attempt in range(1, attempts + 1):
+            try:
+                with urlopen(req, timeout=10) as resp:
+                    content = resp.read().decode()
+                    if not content:
+                        return {"status": resp.status}
+                    try:
+                        return _json.loads(content)
+                    except _json.JSONDecodeError:
+                        return {"status": resp.status, "raw": content}
+            except HTTPError as exc:  # pragma: no cover - runtime guard
+                body = exc.read().decode()
+                raise RuntimeError(f"HTTP {exc.code} {exc.reason}: {body}") from exc
+            except URLError as exc:  # pragma: no cover - runtime guard
+                last_error = RuntimeError(f"Connection failed: {exc}")
+            except TimeoutError as exc:  # pragma: no cover - runtime guard
+                last_error = RuntimeError(f"Connection timed out: {exc}")
+
+            if attempt < attempts:
+                time.sleep(max(1, HTTP_RETRY_DELAY))
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Mindstack request failed without specific error")
 
     # ------------------------------ API -------------------------------
 
