@@ -5,17 +5,19 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from .client import CodexVectorClient
+
 
 @dataclass
 class QueryTest:
     name: str
     query: str
     limit: int = 5
+
 
 @dataclass
 class QueryResult:
@@ -25,16 +27,19 @@ class QueryResult:
     top_metadata: Optional[dict]
     notes: Optional[str] = None
 
+
 @dataclass
 class ResourceCheck:
     name: str
     where: dict
+
 
 @dataclass
 class ResourceResult:
     name: str
     passed: bool
     matches: int
+
 
 @dataclass
 class HealthReport:
@@ -43,6 +48,7 @@ class HealthReport:
     document_count: int
     query_tests: List[QueryResult] = field(default_factory=list)
     resource_checks: List[ResourceResult] = field(default_factory=list)
+
 
 DEFAULT_QUERIES = [
     QueryTest(name="General search", query="codex vector database"),
@@ -66,7 +72,9 @@ DEFAULT_RESOURCES = [
 ]
 
 
-def run_query_tests(cli: CodexVectorClient, collection: str, tests: List[QueryTest]) -> List[QueryResult]:
+def run_query_tests(
+    cli: CodexVectorClient, collection: str, tests: List[QueryTest]
+) -> List[QueryResult]:
     results: List[QueryResult] = []
     for test in tests:
         try:
@@ -98,7 +106,9 @@ def run_query_tests(cli: CodexVectorClient, collection: str, tests: List[QueryTe
     return results
 
 
-def run_resource_checks(cli: CodexVectorClient, collection: str, checks: List[ResourceCheck]) -> List[ResourceResult]:
+def run_resource_checks(
+    cli: CodexVectorClient, collection: str, checks: List[ResourceCheck]
+) -> List[ResourceResult]:
     collection_id = cli.get_collection_id(collection)
     results: List[ResourceResult] = []
     for check in checks:
@@ -125,7 +135,9 @@ def run_resource_checks(cli: CodexVectorClient, collection: str, checks: List[Re
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run Codex stack health checks")
-    parser.add_argument("--collection", default="codex_agent", help="Collection name to validate")
+    parser.add_argument(
+        "--collection", default="codex_agent", help="Collection name to validate"
+    )
     parser.add_argument("--output", help="Optional path to write JSON report")
     args = parser.parse_args()
 
@@ -151,7 +163,9 @@ def main() -> int:
     else:
         print(json.dumps(asdict(report), indent=2))
 
-    failures = [t for t in queries if not t.passed] + [r for r in resources if not r.passed]
+    failures = [t for t in queries if not t.passed] + [
+        r for r in resources if not r.passed
+    ]
     return 1 if failures else 0
 
 

@@ -111,7 +111,6 @@ def _init(
     )
 
 
-# ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
 
@@ -155,7 +154,10 @@ def _command_summary(
         by_title[title] += 1
 
     def _format(counter: Counter[str]) -> List[Dict[str, object]]:
-        return [{"value": value, "count": count} for value, count in counter.most_common(top)]
+        return [
+            {"value": value, "count": count}
+            for value, count in counter.most_common(top)
+        ]
 
     return {
         "collection": collection,
@@ -202,7 +204,9 @@ def query(
     ctx: typer.Context,
     query_text: str = typer.Argument(..., help="Free form query text"),
     collection: str = typer.Option(None, "--collection", help="Collection to query"),
-    limit: int = typer.Option(5, "--limit", min=1, max=50, help="Maximum number of results"),
+    limit: int = typer.Option(
+        5, "--limit", min=1, max=50, help="Maximum number of results"
+    ),
 ) -> None:
     """Run a similarity search against a collection."""
 
@@ -217,11 +221,15 @@ def search(
     ctx: typer.Context,
     query_text: str = typer.Argument(..., help="Free form query text"),
     collection: str = typer.Option(None, "--collection", help="Collection to query"),
-    limit: int = typer.Option(5, "--limit", min=1, max=50, help="Maximum number of results"),
+    limit: int = typer.Option(
+        5, "--limit", min=1, max=50, help="Maximum number of results"
+    ),
 ) -> None:
     """Alias for ``query``."""
 
-    ctx.invoke(query, ctx=ctx, query_text=query_text, collection=collection, limit=limit)
+    ctx.invoke(
+        query, ctx=ctx, query_text=query_text, collection=collection, limit=limit
+    )
 
 
 @app.command()
@@ -229,7 +237,9 @@ def add(
     ctx: typer.Context,
     content: str = typer.Argument(..., help="Document text to store"),
     collection: str = typer.Option(None, "--collection", help="Target collection"),
-    source: Optional[str] = typer.Option(None, "--source", help="Optional metadata source"),
+    source: Optional[str] = typer.Option(
+        None, "--source", help="Optional metadata source"
+    ),
 ) -> None:
     """Add a single document to a collection."""
 
@@ -297,7 +307,9 @@ def upsert(
 def stats(
     ctx: typer.Context,
     collection: str = typer.Option(None, "--collection", help="Collection to inspect"),
-    top: int = typer.Option(5, "--top", min=1, max=50, help="Top metadata values to display"),
+    top: int = typer.Option(
+        5, "--top", min=1, max=50, help="Top metadata values to display"
+    ),
     json_output: Optional[Path] = typer.Option(
         None,
         "--json",

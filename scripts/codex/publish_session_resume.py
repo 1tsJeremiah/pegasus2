@@ -18,7 +18,12 @@ def _normalize_items(items: List[str]) -> List[str]:
         text = raw.strip()
         if not text:
             continue
-        if not text.startswith("- ") and not text.startswith("-\t") and not text.startswith("-\n") and not text.startswith("-"):
+        if (
+            not text.startswith("- ")
+            and not text.startswith("-\t")
+            and not text.startswith("-\n")
+            and not text.startswith("-")
+        ):
             text = f"- {text}"
         normalized.append(text)
     return normalized
@@ -27,10 +32,16 @@ def _normalize_items(items: List[str]) -> List[str]:
 def _load_items(path: Path) -> List[str]:
     if not path.exists():
         raise FileNotFoundError(f"Summary file not found: {path}")
-    return [line.rstrip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        line.rstrip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
-def build_document(session_id: str, snapshot: List[str], follow_up: List[str], *, label: str | None) -> str:
+def build_document(
+    session_id: str, snapshot: List[str], follow_up: List[str], *, label: str | None
+) -> str:
     display = label or session_id.split("-")[0] or session_id
     sections: List[str] = [
         f"# Session Resume - {display}",
@@ -39,19 +50,25 @@ def build_document(session_id: str, snapshot: List[str], follow_up: List[str], *
         "\n".join(snapshot) if snapshot else "(empty)",
     ]
     if follow_up:
-        sections.extend([
-            "",
-            "## Follow-up Hooks",
-            "\n".join(follow_up),
-        ])
+        sections.extend(
+            [
+                "",
+                "## Follow-up Hooks",
+                "\n".join(follow_up),
+            ]
+        )
     sections.append("")
     return "\n".join(sections)
 
 
 def main(argv: List[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Create and publish a Codex session resume")
+    parser = argparse.ArgumentParser(
+        description="Create and publish a Codex session resume"
+    )
     parser.add_argument("session_id", help="Full Codex session identifier (UUID)")
-    parser.add_argument("--label", help="Optional short label used in the markdown title")
+    parser.add_argument(
+        "--label", help="Optional short label used in the markdown title"
+    )
     parser.add_argument(
         "--snapshot",
         action="append",
@@ -87,9 +104,15 @@ def main(argv: List[str] | None = None) -> int:
         default="session-resumes",
         help="Vector collection used for agent access",
     )
-    parser.add_argument("--base-url", default=None, help="Override Codex vector base URL")
-    parser.add_argument("--tenant", default=None, help="Override Codex vector tenant name")
-    parser.add_argument("--database", default=None, help="Override Codex vector database name")
+    parser.add_argument(
+        "--base-url", default=None, help="Override Codex vector base URL"
+    )
+    parser.add_argument(
+        "--tenant", default=None, help="Override Codex vector tenant name"
+    )
+    parser.add_argument(
+        "--database", default=None, help="Override Codex vector database name"
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -130,7 +153,9 @@ def main(argv: List[str] | None = None) -> int:
         return 0
 
     defaults = CodexVectorClient()
-    base_url = args.base_url or os.environ.get("CODEX_VECTOR_BASE_URL") or defaults.base_url
+    base_url = (
+        args.base_url or os.environ.get("CODEX_VECTOR_BASE_URL") or defaults.base_url
+    )
     tenant = args.tenant or os.environ.get("CODEX_VECTOR_TENANT") or defaults.tenant
     database = args.database or os.environ.get("CODEX_VECTOR_DB") or defaults.database
 

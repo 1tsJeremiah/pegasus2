@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Iterable, List, Dict
+from typing import Dict, Iterable, List
 
 import requests
 
@@ -88,11 +88,20 @@ def fetch_content(spec: Dict[str, str]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch official Codex documentation")
-    parser.add_argument("--collection", default="codex_agent", help="Target collection name")
+    parser.add_argument(
+        "--collection", default="codex_agent", help="Target collection name"
+    )
     parser.add_argument("--max-chars", type=int, default=900, help="Chunk size")
     parser.add_argument("--overlap", type=int, default=150, help="Chunk overlap")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for upserts")
-    parser.add_argument("--dest", type=Path, default=Path("data/codex/official_docs"), help="Directory to store fetched text")
+    parser.add_argument(
+        "--batch-size", type=int, default=16, help="Batch size for upserts"
+    )
+    parser.add_argument(
+        "--dest",
+        type=Path,
+        default=Path("data/codex/official_docs"),
+        help="Directory to store fetched text",
+    )
     args = parser.parse_args()
 
     dest_dir: Path = args.dest
@@ -111,7 +120,9 @@ def main() -> int:
         text_path = dest_dir / f"{spec['id']}.txt"
         text_path.write_text(content, encoding="utf-8")
 
-        for index, chunk in enumerate(chunk_text(content, max_chars=args.max_chars, overlap=args.overlap), start=1):
+        for index, chunk in enumerate(
+            chunk_text(content, max_chars=args.max_chars, overlap=args.overlap), start=1
+        ):
             all_chunks.append(
                 {
                     "text": chunk,
@@ -137,7 +148,9 @@ def main() -> int:
             create_collection=True,
         )
 
-    print(f"Ingested {len(all_chunks)} chunks from official sources into '{args.collection}'.")
+    print(
+        f"Ingested {len(all_chunks)} chunks from official sources into '{args.collection}'."
+    )
     return 0
 
 

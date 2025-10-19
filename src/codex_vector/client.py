@@ -17,15 +17,12 @@ from functools import lru_cache
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 from urllib.parse import urlparse
 
-from .embeddings import (
-    DEFAULT_DIMENSION,
-    generate_embedding,
-    get_dimension,
-    get_model_name,
-    load_sentence_transformer,
-)
+from .embeddings import (DEFAULT_DIMENSION, generate_embedding, get_dimension,
+                         get_model_name, load_sentence_transformer)
 
-DEFAULT_BASE_URL = os.environ.get("CODEX_VECTOR_BASE_URL", "http://127.0.0.1:8000/api/v2")
+DEFAULT_BASE_URL = os.environ.get(
+    "CODEX_VECTOR_BASE_URL", "http://127.0.0.1:8000/api/v2"
+)
 DEFAULT_TENANT = os.environ.get("CODEX_VECTOR_TENANT", "default_tenant")
 DEFAULT_DATABASE = os.environ.get("CODEX_VECTOR_DB", "default_database")
 DEFAULT_BACKEND = os.environ.get("CODEX_VECTOR_BACKEND", "auto").lower()
@@ -684,12 +681,16 @@ class CodexVectorClient:
             if metadata:
                 print(f"      metadata={metadata}")
 
-    def query_results(self, name_or_id: str, query_text: str, *, limit: int = 5) -> List[dict]:
+    def query_results(
+        self, name_or_id: str, query_text: str, *, limit: int = 5
+    ) -> List[dict]:
         collection_id = self.get_collection_id(name_or_id)
         embedding = self._embed_documents([query_text])[0]
         return self._adapter.query(collection_id, embedding, limit=limit)
 
-    def iter_metadata(self, name_or_id: str, *, batch_size: int = 500) -> Iterable[Dict[str, Any]]:
+    def iter_metadata(
+        self, name_or_id: str, *, batch_size: int = 500
+    ) -> Iterable[Dict[str, Any]]:
         collection_id = self.get_collection_id(name_or_id)
         yield from self._adapter.iter_metadata(collection_id, batch_size=batch_size)
 
@@ -749,6 +750,40 @@ class CodexVectorClient:
         hasher.update(content.encode("utf-8"))
         return f"doc-{hasher.hexdigest()}"
 
+ 
+
+    def _parse_query_results(self, payload: Optional[dict]) -> List[dict]:
+        payload = payload or {}
+        raw_results: List[dict] = []
+        if isinstance(payload, dict) and "results" in payload:
+            raw_results = payload.get("results", []) or []
+        elif isinstance(payload, dict):
+            raw_results = [
+                {
+                    "documents": payload.get("documents"),
+                    "distances": payload.get("distances"),
+                    "metadatas": payload.get("metadatas"),
+                }
+            ]
+
+        if not raw_results:
+            return []
+
+        first = raw_results[0]
+        docs = (first.get("documents") or [[]])[0] or []
+        dists = (first.get("distances") or [[]])[0] or []
+        metas = (first.get("metadatas") or [[]])[0] or []
+
+        results: List[dict] = []
+        for idx, doc in enumerate(docs):
+            distance = dists[idx] if idx < len(dists) else None
+            metadata = metas[idx] if idx < len(metas) else {}
+            results.append(
+                {"document": doc, "distance": distance, "metadata": metadata}
+            )
+        return results
+
+ 
     @staticmethod
     def _select_backend(preference: str, base_url: str) -> str:
         if preference in {"chroma", "qdrant"}:
