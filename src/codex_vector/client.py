@@ -789,6 +789,11 @@ class CodexVectorClient:
         if preference in {"chroma", "qdrant"}:
             return preference
         if preference == "auto":
+            # Check if MINDSTACK_PROFILE=production is set, which should default to Qdrant
+            mindstack_profile = os.environ.get("MINDSTACK_PROFILE", "").lower()
+            if mindstack_profile == "production":
+                return "qdrant"
+            
             target = base_url.lower()
             if "6333" in target or "qdrant" in target:
                 return "qdrant"

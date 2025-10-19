@@ -46,11 +46,11 @@ def _get_port() -> int:
     return 3000
 
 
-INDEX_HTML = b"""<!doctype html>
-<html lang=\"en\">
+INDEX_HTML = """<!doctype html>
+<html lang="en">
   <head>
-    <meta charset=\"utf-8\" />
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Workspace Web Preview</title>
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; color: #eaeaea; background: #1e1e1e; }
@@ -65,30 +65,30 @@ INDEX_HTML = b"""<!doctype html>
     </style>
   </head>
   <body>
-    <div class=\"wrap\">
+    <div class="wrap">
       <h1>Workspace Web Preview</h1>
       <p>This tiny server is running. Use it to verify the web preview panel is connected.</p>
 
-      <div class=\"grid\">
-        <div class=\"card\">
+      <div class="grid">
+        <div class="card">
           <h3>Endpoints</h3>
           <ul>
-            <li><a href=\"/\">/</a> – this page</li>
-            <li><a href=\"/health\">/health</a> – JSON health check</li>
-            <li><a href=\"/env\">/env</a> – selected environment variables</li>
+            <li><a href="/">/</a> – this page</li>
+            <li><a href="/health">/health</a> – JSON health check</li>
+            <li><a href="/env">/env</a> – selected environment variables</li>
           </ul>
-          <p class=\"muted\">Change the port with <code>PORT=3010</code> or <code>python webserver/server.py 3010</code></p>
+          <p class="muted">Change the port with <code>PORT=3010</code> or <code>python webserver/server.py 3010</code></p>
         </div>
-        <div class=\"card\">
+        <div class="card">
           <h3>Tips</h3>
           <ul>
             <li>Bind to <code>0.0.0.0</code> so the preview can reach it.</li>
-            <li>If the panel is blank, the port might be busy. Try <code>--port 3010</code>.</li>
+            <li>If the panel is blank, the port might be busy. Try a different port.</li>
           </ul>
         </div>
       </div>
 
-      <p class=\"muted\">Server path: <code>webserver/server.py</code></p>
+      <p class="muted">Server path: <code>webserver/server.py</code></p>
     </div>
   </body>
   </html>
@@ -135,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             self._set_html(HTTPStatus.OK)
-            self.wfile.write(INDEX_HTML)
+            self.wfile.write(INDEX_HTML.encode("utf-8"))
             return
         if path == "/health":
             self._set_json(HTTPStatus.OK)
