@@ -32,10 +32,24 @@ export OPENAI_API_KEY="your-api-key-here"
 ./.venv/bin/python src/codex_integration/vector_cli.py search "find large files"
 ```
 
+## 🧠 Mindstack (Pegasus Memory)
+
+Mindstack is the local Pegasus memory stack that bundles the Chroma vector store (transitioning to Qdrant), the Meilisearch keyword index, and the supporting MCP launch scripts. When agents refer to "Mindstack" they can assume the full package is available: vector search, keyword lookup, and the orchestration helpers that keep them in sync.
+
+- **Mindstack Core (Chroma → Qdrant)** powers local development by default. Set `MINDSTACK_PROFILE=production` (or override `CODEX_VECTOR_BACKEND=qdrant`) to promote Qdrant while the migration is underway.
+- **Mindstack Index (Meilisearch)** surfaces fast keyword matches across the filesystem and curated documents.
+- **Mindstack Observability** layers Prometheus + cAdvisor for metrics and ships a snapshot helper for persistent volumes.
+- **Mindstack Orchestrator (MCP scripts)** launches Docker, GitHub, Android ADB, and other optional servers so Codex can automate the environment.
+- **Mindstack Reliability**: `scripts/codex/launch_mcp_stack.sh` now waits for the stack to answer before starting MCP servers and boots `scripts/codex/mindstack_watchdog.sh` to keep connections healthy.
+
+Mindstack is the preferred name to use in playbooks, prompts, and documentation—agents do not need to reference "the Chroma/Meili stack" explicitly.
+
+Refer to `docs/mindstack_connectivity.md` for operational notes on keeping Mindstack reachable.
+
 ## 🎯 Project Overview
 
 This project provides a seamless integration between:
-- **🗄️ Vector Databases** (Chroma/Qdrant) containerized with Docker
+- **🧠 Mindstack Vector Layer** (Chroma for development, Qdrant for scale) containerized with Docker
 - **🔗 LangChain** for vector operations, embeddings, and retrieval
 - **⚡ Codex Agent** for AI-enhanced terminal experiences
 
@@ -45,11 +59,14 @@ This project provides a seamless integration between:
 - **🤖 Intelligent Help System**: Get context-aware assistance for terminal operations
 - **📚 Command Knowledge Base**: Learn and remember command patterns and usage
 - **🐳 Docker-First**: Easy deployment with Docker and docker-compose
-- **🔄 Multiple Vector DB Support**: Choose between Chroma (development) and Qdrant (production)
+- **🔄 Mindstack Flexibility**: Choose the Mindstack Core (Chroma) for development or swap in Qdrant for production scale
 - **🎨 Rich Terminal UI**: Beautiful command-line interface with Rich library
 - **📊 Collection Analytics**: Built-in stats command and nightly reports surface top sources and document trends
 - **🎯 Embedding Flexibility**: Prefers `sentence-transformers` models when available and falls back to Blake2b-derived vectors for fully offline use
+- **♻️ Stable Doc IDs**: Opt-in metadata-derived IDs for clean document overwrites (`CODEX_VECTOR_DOC_ID_FIELDS`)
+- **⚙️ Adaptive Qdrant Transport**: Prefers gRPC for ingestion/search throughput (`CODEX_QDRANT_USE_GRPC=0` forces HTTP)
 - **⚡ Keyword Search Companion**: Optional Meilisearch index delivers lightning-fast filename and content matches across the OS
+- **📈 Observability Suite**: Prometheus + Grafana containers for dashboards and alerting
 
 ### Preloaded Collections
 - `codex_agent`: OpenAI Codex cookbook excerpts
@@ -103,7 +120,7 @@ This project provides a seamless integration between:
 | **FAISS** | ✅ Good | ⚠️ Limited | ✅ Good | ➖ No Persistence |
 
 **✅ Recommendations**:
-- **Development**: Chroma (simple setup, great for prototyping)
+- **Development**: Mindstack Core (Chroma) – simple setup, great for prototyping
 - **Production**: Qdrant (enterprise features, high performance)
 
 ### ✅ LangChain Integration Complete
@@ -155,7 +172,7 @@ CODEX_VECTOR_DIM=384
 
 #### 3. Start Vector Database
 
-**For Development (Chroma):**
+**For Development (Mindstack Core):**
 ```bash
 docker-compose -f docker/docker-compose.dev.yml up -d
 ```
@@ -245,7 +262,7 @@ Run `scripts/codex/launch_mcp_stack.sh` to refresh the vector collections (via `
 RUN_VECTOR_SYNC=1 scripts/codex/launch_mcp_stack.sh
 ```
 
-- Boots the Chroma container if required and runs the ingestion/health pipeline.
+- Boots the Mindstack Core (Chroma) container if required and runs the ingestion/health pipeline.
 - Starts the Docker MCP server (unless it is already running).
 - Starts the GitHub MCP server when `GITHUB_PAT`/`GITHUB_PERSONAL_ACCESS_TOKEN` is present.
 - Defaults to `CODEX_EMBED_PROVIDER=hash`; override the variable before launching if you prefer HuggingFace or OpenAI embeddings.
@@ -274,6 +291,18 @@ Launch when you want Codex to interact with repositories:
 
 ```bash
 GITHUB_PAT=ghp_xxx scripts/codex/run_github_mcp.sh
+```
+
+### Android ADB MCP server
+
+- Manifest: `config/codex/android-adb-mcp.json` (copy into your MCP host's tooling directory).
+- Runtime: `scripts/codex/run_android_adb_mcp.sh` (requires the Android Platform Tools so `adb` is in PATH).
+- Optionally disable automatic startup by exporting `START_ANDROID_ADB_MCP=0` before running `scripts/codex/launch_mcp_stack.sh`.
+
+Start it manually when you need to automate a connected device:
+
+```bash
+scripts/codex/run_android_adb_mcp.sh
 ```
 
 ### Automated health checks
@@ -346,7 +375,7 @@ arguments:
 vector-db-langchain/
 ├── 🐳 docker/                     # Docker configurations
 │   ├── docker-compose.yml         # Production setup (Chroma + Qdrant)
-│   └── docker-compose.dev.yml     # Development setup (Chroma only)
+│   └── docker-compose.dev.yml     # Development setup (Mindstack Core only)
 ├── 📄 docs/                       # Documentation
 │   ├── vector_db_research.md      # Vector DB analysis
 │   └── codex_integration_guide.md  # Codex Agent integration
@@ -374,6 +403,7 @@ vector-db-langchain/
 │       ├── launch_mcp_stack.sh    # Orchestrate vector sync and MCP servers
 │       ├── publish_session_resume.py # Persist searchable engagement summaries
 │       ├── report_stats.sh        # On-demand collection statistics
+│       ├── run_android_adb_mcp.sh # Launch Android ADB MCP server
 │       ├── run_docker_mcp.sh      # Launch Docker MCP server
 │       ├── run_github_mcp.sh      # Launch GitHub MCP server
 │       ├── sync_documents.sh      # Nightly doc sync + health report
@@ -381,6 +411,7 @@ vector-db-langchain/
 ├── 🗂 config/
 │   ├── codex/vector-cli.json      # Manifest for registering the CLI tool
 │   ├── codex/all-tools.json       # Aggregated tool manifest for agents
+│   ├── codex/android-adb-mcp.json # Android ADB MCP manifest
 │   ├── codex/docker-mcp.json      # Docker MCP manifest
 │   ├── codex/github-mcp.json      # GitHub MCP manifest
 │   └── codex/meili-cli.json       # Keyword search manifest
@@ -443,15 +474,34 @@ vcli help "commit and push changes"
 OPENAI_API_KEY=your-openai-api-key        # For embeddings
 
 # Optional (with defaults)
-CHROMA_HOST=localhost                      # Chroma server host
-CHROMA_PORT=8000                          # Chroma server port
+CHROMA_HOST=localhost                      # Mindstack Core (Chroma) host
+CHROMA_PORT=8000                          # Mindstack Core (Chroma) port
 QDRANT_HOST=localhost                      # Qdrant server host  
 QDRANT_PORT=6333                          # Qdrant server port
 CODEX_VECTOR_COLLECTION=codex_agent     # Collection name
 CODEX_MEILI_URL=http://127.0.0.1:7700    # Meilisearch base URL
 CODEX_MEILI_API_KEY=dev-master-key-123456 # Meilisearch API key (optional for dev)
 CODEX_MEILI_INDEX=codex_os_search        # Keyword index name
+CODEX_QDRANT_USE_GRPC=1                 # Prefer Qdrant gRPC transport (set 0 to disable)
+CODEX_QDRANT_GRPC_PORT=6334             # Override gRPC port (auto +1 from HTTP port)
+CODEX_VECTOR_UPSERT_BATCH=128           # Maximum docs per upsert call
+CODEX_VECTOR_EXISTING_ID_BATCH=256      # Maximum ids per existence lookup
+CODEX_VECTOR_DOC_ID_FIELDS=source,position  # Metadata keys used to derive stable doc IDs
+CODEX_VECTOR_OVERWRITE_EXISTING=0       # Re-upsert documents when IDs already exist
+RESTIC_REPOSITORY=s3:s3.amazonaws.com/...    # Optional restic repo for backup_mindstack.sh
+RESTIC_PASSWORD_FILE=~/.config/restic/pass   # Restic password file (or export RESTIC_PASSWORD)
+RESTIC_BACKUP_ARGS="--host mindstack"        # Additional flags for restic backup
+RESTIC_FORGET_ARGS="--keep-last 7 --prune"   # Retention policy passed to restic forget
+TRAEFIK_DASHBOARD_USERS=admin:$$2y$$...      # htpasswd entry exported from Bitwarden (optional)
+GRAFANA_ADMIN_USER=grafana                  # Grafana admin username
+GRAFANA_ADMIN_PASSWORD=strong-password      # Grafana admin password (store in Bitwarden)
 ```
+
+## 🛡️ Backups & Observability
+
+- `scripts/codex/backup_mindstack.sh` keeps the local tarball flow and, when `RESTIC_REPOSITORY` is set (plus credentials), automatically uploads each artifact via `restic backup` and applies optional retention with `RESTIC_FORGET_ARGS`.
+- `monitoring/prometheus.yml` now scrapes cAdvisor, Qdrant, and Meilisearch metrics so dashboards can include vector-store health alongside container stats.
+- Combine both by running `RESTIC_REPOSITORY=s3:... scripts/codex/backup_mindstack.sh` under a cron/systemd timer and pointing Grafana at Prometheus for seatbelt monitoring.
 
 ### Docker Customization
 
@@ -587,7 +637,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🙏 Acknowledgments
 
 - [LangChain](https://langchain.com/) for the excellent framework
-- [Chroma](https://trychroma.com/) for the developer-friendly vector database
+- [Chroma](https://trychroma.com/) for the developer-friendly Mindstack Core vector database
 - [Qdrant](https://qdrant.tech/) for high-performance vector search
 - Codex CLI (internal docs) for agent orchestration guidance
 

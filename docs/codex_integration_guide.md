@@ -22,7 +22,7 @@ dependencies are required.
 
 ## 2. Start the Vector Database
 
-The project supports Chroma for local development.
+The project supports the Mindstack Core (Chroma) for local development.
 
 ```bash
 cd docker
@@ -31,7 +31,7 @@ docker compose -f docker-compose.dev.yml up -d
 
 Confirm the container is healthy:
 ```bash
-docker ps --filter name=chroma
+docker ps --filter name=chroma  # Mindstack Core container
 ```
 
 ## 3. Use the Codex Vector CLI
@@ -48,7 +48,7 @@ python src/codex_integration/vector_cli.py status
 - `python src/codex_integration/vector_cli.py search "deploy container" --collection codex_agent` – Semantic lookup
 - `python src/codex_integration/vector_cli.py setup --collection codex_agent` – Seed baseline command help
 
-These commands use LangChain's `Chroma` vector store client under the hood. By default the bundled manifests set `CODEX_EMBED_PROVIDER=hash`, which locks the CLI to deterministic Blake2b vectors. Set `CODEX_EMBED_MODEL` (and switch the provider to `huggingface` or `openai`) if you want higher quality embeddings, and adjust `CODEX_VECTOR_DIM` (default 384) when changing models.
+These commands use LangChain's Mindstack Core (Chroma) vector store client under the hood. By default the bundled manifests set `CODEX_EMBED_PROVIDER=hash`, which locks the CLI to deterministic Blake2b vectors. Set `CODEX_EMBED_MODEL` (and switch the provider to `huggingface` or `openai`) if you want higher quality embeddings, and adjust `CODEX_VECTOR_DIM` (default 384) when changing models.
 
 To bulk ingest project documentation with a high-quality model, run:
 
@@ -84,7 +84,7 @@ PYTHONPATH=src python scripts/codex/publish_session_resume.py <session-id> --lab
 
 Provide one or more `--snapshot` bullets to capture the human-facing summary. Optional `--follow` bullets record next steps.
 
-The script writes a markdown file under `~/Documents/codex-resumes/` (for example `session-01999568.md`) and mirrors the same text into the `session-resumes` Chroma collection so agents can search it.
+The script writes a markdown file under `~/Documents/codex-resumes/` (for example `session-01999568.md`) and mirrors the same text into the `session-resumes` Mindstack Core collection so agents can search it.
 
 Add `PYTHONPATH=src` (or activate the project virtualenv) so the helper can import `codex_vector`.
 
@@ -92,13 +92,17 @@ Add `PYTHONPATH=src` (or activate the project virtualenv) so the helper can impo
 
 A ready-to-use tool manifest lives at `config/codex/vector-cli.json`. Copy it into your Codex tools directory (for example `~/.codex/tools/vector-cli.json`) to register the CLI with the agent. Update the path or environment variables if your deployment differs.
 
-If you want Codex to access Docker and GitHub alongside the vector CLI, drop in `config/codex/all-tools.json`. It combines the LangChain CLI, Docker MCP server, and GitHub MCP server with sensible defaults (`CODEX_EMBED_PROVIDER=hash`).
+If you want Codex to access Docker, GitHub, Android debugging, and the rest of Mindstack alongside the vector CLI, drop in `config/codex/all-tools.json`. It combines the LangChain CLI, Docker MCP server, GitHub MCP server, and Android ADB MCP server with sensible defaults (`CODEX_EMBED_PROVIDER=hash`).
 
-To boot everything in one shot, run `scripts/codex/launch_mcp_stack.sh`. The helper ensures Chroma is up, refreshes the vector collections through `scripts/codex/sync_documents.sh`, and starts the Docker/GitHub MCP servers (skipping GitHub if no token is configured). Control behaviour with environment variables such as `RUN_VECTOR_SYNC=0`, `START_DOCKER_MCP=0`, or `START_GITHUB_MCP=0`. Stop the services with `Ctrl+C` when you are done.
+To boot everything in one shot, run `scripts/codex/launch_mcp_stack.sh`. The helper ensures the Mindstack Core (Chroma) service is up, refreshes the vector collections through `scripts/codex/sync_documents.sh`, and starts the Docker/GitHub MCP servers plus the Android ADB server when `adb` is on PATH (skipping GitHub if no token is configured). Control behaviour with environment variables such as `RUN_VECTOR_SYNC=0`, `START_DOCKER_MCP=0`, `START_GITHUB_MCP=0`, or `START_ANDROID_ADB_MCP=0`. Stop the services with `Ctrl+C` when you are done.
 
 To enable Docker management, copy `config/codex/docker-mcp.json` and start `scripts/codex/run_docker_mcp.sh` in a separate terminal when needed.
 
 For GitHub integration, copy `config/codex/github-mcp.json` and launch `scripts/codex/run_github_mcp.sh` (ensure `GITHUB_PAT` or `GITHUB_PERSONAL_ACCESS_TOKEN` is exported).
+
+If you need Android device automation, copy `config/codex/android-adb-mcp.json` and run `scripts/codex/run_android_adb_mcp.sh`.
+
+Review `docs/mindstack_connectivity.md` for notes on keeping the local Mindstack stack responsive during long-running sessions.
 
 ### Routine health check
 
@@ -121,7 +125,7 @@ For convenience run: `scripts/codex/report_stats.sh`.
 ### Keyword search companion
 
 ```bash
-# Ensure Meilisearch is running (compose brings it up alongside Chroma)
+# Ensure the Mindstack Index (Meilisearch) is running (compose brings it up alongside Mindstack Core)
 docker compose -f docker/docker-compose.dev.yml up -d meilisearch
 
 # Create the index and ingest local/system files
@@ -139,7 +143,7 @@ Add `config/codex/meili-cli.json` to Codex when you want agents to query the key
 
 ## 4. Hook Into Codex
 
-1. Ensure the vector CLI can reach the Chroma instance (use the `status` command).
+1. Ensure the vector CLI can reach the Mindstack Core instance (use the `status` command).
 2. Register the CLI as a tool in Codex by pointing to a wrapper script, e.g.:
    ```json
    {
@@ -166,3 +170,5 @@ Add `config/codex/meili-cli.json` to Codex when you want agents to query the key
 - Automate ingestion by pointing `add-docs` at project documentation folders.
 - Extend the CLI with custom subcommands for your Codex agents.
 - Configure Codex workflows to call the CLI automatically after deployments.
+
+> **Prompting tip:** refer to the memory stack as **Mindstack** (Mindstack Core + Mindstack Index) when asking models to search or refresh the knowledge base.

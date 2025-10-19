@@ -6,7 +6,7 @@ Based on research of LangChain documentation and vector database providers, this
 
 ## Top Vector Database Candidates
 
-### 1. Chroma DB ⭐ RECOMMENDED
+### 1. Mindstack Core (Chroma) ⭐ RECOMMENDED
 **Why it's ideal for this project:**
 - **Docker-friendly**: Simple container deployment
 - **LangChain Integration**: ✅ Full support with extensive features
@@ -93,7 +93,7 @@ Based on LangChain documentation, the following features are supported:
 
 | Vector Store | Delete by ID | Filtering | Search by Vector | Async | Multi-tenancy |
 |-------------|-------------|-----------|------------------|-------|---------------|
-| Chroma      | ✅          | ✅        | ✅               | ✅    | ✅            |
+| Mindstack Core (Chroma) | ✅          | ✅        | ✅               | ✅    | ✅            |
 | Qdrant      | ✅          | ✅        | ✅               | ✅    | ✅            |
 | Weaviate    | ✅          | ✅        | ✅               | ✅    | ✅            |
 | Milvus      | ✅          | ✅        | ✅               | ✅    | ✅            |
@@ -110,7 +110,7 @@ from langchain_openai import OpenAIEmbeddings
 embeddings = OpenAIEmbeddings()
 
 # Create/connect to vector store
-vectorstore = Chroma(
+vectorstore = Mindstack Core (Chroma)(
     collection_name="my_collection",
     embedding_function=embeddings,
     persist_directory="./chroma_db"
@@ -165,7 +165,7 @@ results = vectorstore.similarity_search("query", k=5)
     │  Vector Database │
     │  (Docker)        │
     │ ┌──────────────┐ │
-    │ │ Chroma/Qdrant│ │
+    │ │ Mindstack Core (Chroma)/Qdrant│ │
     │ │ Persistent   │ │
     │ │ Storage      │ │
     │ └──────────────┘ │
@@ -175,7 +175,7 @@ results = vectorstore.similarity_search("query", k=5)
 ## Implementation Recommendations
 
 ### Phase 1: Development Setup (Chroma)
-- Use Chroma for rapid prototyping and development
+- Use Mindstack Core (Chroma) for rapid prototyping and development
 - Simple Docker setup with minimal configuration
 - Focus on LangChain integration patterns
 
@@ -191,7 +191,7 @@ results = vectorstore.similarity_search("query", k=5)
 
 ## Next Steps
 
-1. **Prototype with Chroma**: Quick setup and LangChain integration testing
+1. **Prototype with Mindstack Core (Chroma)**: Quick setup and LangChain integration testing
 2. **Create Docker configurations**: docker-compose for both Chroma and Qdrant
 3. **Develop integration scripts**: Python scripts for common operations
 4. **Design CLI tools**: Codex Agent specific command-line utilities
