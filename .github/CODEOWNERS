@@ -1,0 +1,5 @@
+# Require review by repo owner for critical stack files
+/docker-compose-master.yml @1tsJeremiah
+/docs/** @1tsJeremiah
+/PIHOLE-WIRING-NOTES.md @1tsJeremiah
+/SETUP-COMPLETE.md @1tsJeremiah
