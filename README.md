@@ -644,3 +644,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **Ready to supercharge your terminal with AI? Get started now!** 🚀
+\n\n## Stack DNS/Self-Healing\nSee docs/STACK_DNS_SELFHEALING.md for architecture and operations.\n
