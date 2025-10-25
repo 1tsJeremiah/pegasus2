@@ -1,0 +1,312 @@
+
+
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.1.2
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - traefik
+      - pihole_net
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8082:8082"
+    dns:
+      - 172.22.53.53
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/data/traefik.yml:/traefik.yml:ro
+      - ./traefik/data/acme.json:/acme.json
+      - ./traefik/data/dynamic.yml:/dynamic.yml:ro
+    environment:
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL:-admin@localhost}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS:-admin:$$2y$$10$$8YKUKyFqgYFfJGmwMdlUa.NR/HkY8GGKWqaYvfwGFGwCLWVHFRkma}"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping=true"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+
+  # Webhook Server
+  webhook-server:
+    build: ./webhook-server
+    container_name: webhook-server
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webhook.entrypoints=web"
+      - "traefik.http.routers.webhook.rule=Host(`webhook.localhost`)"
+      - "traefik.http.routers.webhook.tls=false"
+      - "traefik.http.routers.webhook-secure.entrypoints=websecure"
+      - "traefik.http.routers.webhook-secure.rule=Host(`webhook.localhost`)"
+      - "traefik.http.routers.webhook-secure.tls=true"
+      - "traefik.http.routers.webhook-secure.service=webhook"
+      - "traefik.http.services.webhook.loadbalancer.server.port=3000"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    dns:
+      - 172.22.53.53
+
+  # Pi-hole
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:2025.10.0
+    restart: unless-stopped
+    depends_on:
+      unbound:
+        condition: service_healthy
+    networks:
+      traefik: {}
+      pihole_net:
+        ipv4_address: 172.22.53.53
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    environment:
+      TZ: 'America/Chicago'
+      WEBPASSWORD: '${PIHOLE_PASSWORD}'
+      DNS1: '172.22.53.54#53'
+      DNS2: '172.22.53.54#53'
+      DNSMASQ_LISTENING: 'all'
+      FTLCONF_LOCAL_IPV4: '0.0.0.0'
+    volumes:
+      - pihole_etc:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN
+    cpu_shares: 2048
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "dig +norecurse @127.0.0.1 localhost || exit 1"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pihole.entrypoints=web"
+      - "traefik.http.routers.pihole.rule=Host(`pihole.localhost`)"
+      - "traefik.http.routers.pihole.tls=false"
+      - "traefik.http.routers.pihole-secure.entrypoints=websecure"
+      - "traefik.http.routers.pihole-secure.rule=Host(`pihole.localhost`)"
+      - "traefik.http.routers.pihole-secure.tls=true"
+      - "traefik.http.routers.pihole-secure.service=pihole"
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+      - "autoheal=true"
+
+  # Portainer
+  portainer:
+    image: portainer/portainer-ce:2.21.4
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.entrypoints=web"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.localhost`)"
+      - "traefik.http.routers.portainer.tls=false"
+      - "traefik.http.routers.portainer-secure.entrypoints=websecure"
+      - "traefik.http.routers.portainer-secure.rule=Host(`portainer.localhost`)"
+      - "traefik.http.routers.portainer-secure.tls=true"
+      - "traefik.http.routers.portainer-secure.service=portainer"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+      - "autoheal=true"
+    dns:
+      - 172.22.53.53
+
+  # Chroma Vector Database (local semantic search backend)
+  chroma:
+    image: chromadb/chroma:0.4.24
+    container_name: chroma-vectordb
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./vector-db-langchain/docker/chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["*"]
+      - CHROMA_LOG_LEVEL=INFO
+    labels:
+      - "traefik.enable=false"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-lc", "exec 3<>/dev/tcp/127.0.0.1/8000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    dns:
+      - 172.22.53.53
+
+  # Qdrant Vector Database (production-grade vector store)
+  qdrant:
+    image: qdrant/qdrant:v1.15.1
+    container_name: qdrant-vectordb
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    ports:
+      - "127.0.0.1:6333:6333"  # HTTP API
+      - "127.0.0.1:6334:6334"  # gRPC API
+    volumes:
+      - ./vector-db-langchain/docker/qdrant_data:/qdrant/storage
+    labels:
+      - "traefik.enable=false"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD", "/bin/bash", "-lc", "exec 3<>/dev/tcp/127.0.0.1/6333 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+    dns:
+      - 172.22.53.53
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    ports:
+      - "127.0.0.1:9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    labels:
+      - "traefik.enable=false"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9090/-/ready >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    dns:
+      - 172.22.53.53
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - traefik
+      - pihole_net
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_SERVER_ROOT_URL: http://grafana.localhost
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
+      - "traefik.http.routers.grafana.tls=false"
+      - "traefik.http.routers.grafana-secure.entrypoints=websecure"
+      - "traefik.http.routers.grafana-secure.rule=Host(`grafana.localhost`)"
+      - "traefik.http.routers.grafana-secure.tls=true"
+      - "traefik.http.routers.grafana-secure.service=grafana"
+      - "traefik.http.routers.grafana-secure.middlewares=default-headers@file"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    dns:
+      - 172.22.53.53
+
+  # Unbound recursive DNS resolver (upstream for Pi-hole)
+  unbound:
+    image: mvance/unbound:latest
+    container_name: unbound
+    restart: unless-stopped
+    networks:
+      pihole_net:
+        ipv4_address: 172.22.53.54
+    labels:
+      - "traefik.enable=false"
+      - "autoheal=true"
+    healthcheck:
+      test: ["CMD-SHELL", "drill @127.0.0.1 cloudflare.com A >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Autoheal monitors containers with label autoheal=true and restarts them if unhealthy
+  autoheal:
+    image: willfarrell/autoheal:latest
+    container_name: autoheal
+    restart: unless-stopped
+    environment:
+      - AUTOHEAL_INTERVAL=30
+      - AUTOHEAL_START_PERIOD=0
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik
+      - pihole_net
+    labels:
+      - "traefik.enable=false"
+
+volumes:
+  portainer_data:
+  pihole_etc:
+  pihole_dnsmasq:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  traefik:
+    external: true
+  pihole_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.53.0/24
+
+  
